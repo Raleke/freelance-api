@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  freelance-api:
+    build: .
+    container_name: freelance-api
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/FREELANCE_API
+      - PORT=4000
+      - NODE_ENV=production
+      - CLIENT_URL=http://localhost:4000
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongo
+    command: node server.js
+
+  mongo:
+    image: mongo:6
+    container_name: freelance_mongo
+    ports:
+      - "27018:27017"  # Map container port 27017 to host port 27018
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

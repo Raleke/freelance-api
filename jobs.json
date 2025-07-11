@@ -1,0 +1,119 @@
+[
+  {
+    "title": "React Developer Needed",
+    "description": "Looking for a React developer to build a responsive web app.",
+    "budget": 1200,
+    "skills": ["react", "html", "css", "javascript"],
+    "deadline": "2025-07-15T00:00:00Z",
+    "milestones": [
+      { "title": "UI Design", "dueDate": "2025-07-10", "amount": 400 },
+      { "title": "Frontend Build", "dueDate": "2025-07-13", "amount": 800 }
+    ]
+  },
+  {
+    "title": "Build Flutter MVP App",
+    "description": "Create a cross-platform MVP for a travel app.",
+    "budget": 2500,
+    "skills": ["flutter", "firebase", "google-maps"],
+    "deadline": "2025-07-20T00:00:00Z",
+    "milestones": [
+      { "title": "Setup Firebase Auth", "dueDate": "2025-07-10", "amount": 600 },
+      { "title": "Trip Listing UI", "dueDate": "2025-07-15", "amount": 900 },
+      { "title": "Map Integration", "dueDate": "2025-07-18", "amount": 1000 }
+    ]
+  },
+  {
+    "title": "Python Web Scraping Bot",
+    "description": "Build a bot to scrape ecommerce prices daily.",
+    "budget": 800,
+    "skills": ["python", "beautifulsoup", "selenium"],
+    "deadline": "2025-07-18T00:00:00Z",
+    "milestones": [
+      { "title": "Target Analysis & Setup", "dueDate": "2025-07-09", "amount": 200 },
+      { "title": "Bot Implementation", "dueDate": "2025-07-13", "amount": 400 },
+      { "title": "Data Export + Cron Job", "dueDate": "2025-07-17", "amount": 200 }
+    ]
+  },
+  {
+    "title": "UI/UX Designer for SaaS",
+    "description": "Revamp our admin dashboard using Figma.",
+    "budget": 600,
+    "skills": ["figma", "ui/ux", "saas"],
+    "deadline": "2025-07-12T00:00:00Z",
+    "milestones": [
+      { "title": "Low Fidelity Wireframes", "dueDate": "2025-07-09", "amount": 200 },
+      { "title": "Final Figma Design", "dueDate": "2025-07-11", "amount": 400 }
+    ]
+  },
+  {
+    "title": "Laravel API Developer",
+    "description": "Build secure RESTful APIs for our mobile app backend.",
+    "budget": 1500,
+    "skills": ["laravel", "php", "mysql"],
+    "deadline": "2025-07-17T00:00:00Z",
+    "milestones": [
+      { "title": "Auth & User Module", "dueDate": "2025-07-10", "amount": 500 },
+      { "title": "Business Logic + Controllers", "dueDate": "2025-07-14", "amount": 600 },
+      { "title": "Testing & Docs", "dueDate": "2025-07-16", "amount": 400 }
+    ]
+  },
+  {
+    "title": "SEO Expert for Content Blog",
+    "description": "Optimize SEO for 20 blog articles and improve rankings.",
+    "budget": 400,
+    "skills": ["seo", "content-marketing", "linkbuilding"],
+    "deadline": "2025-07-11T00:00:00Z",
+    "milestones": [
+      { "title": "Audit and Report", "dueDate": "2025-07-07", "amount": 100 },
+      { "title": "On-page SEO Fixes", "dueDate": "2025-07-09", "amount": 150 },
+      { "title": "Backlink Strategy", "dueDate": "2025-07-11", "amount": 150 }
+    ]
+  },
+  {
+    "title": "Integrate ChatGPT with Helpdesk",
+    "description": "Use OpenAI API to auto-respond to support tickets.",
+    "budget": 1000,
+    "skills": ["openai", "nodejs", "webhooks"],
+    "deadline": "2025-07-25T00:00:00Z",
+    "milestones": [
+      { "title": "Setup API + Auth", "dueDate": "2025-07-12", "amount": 300 },
+      { "title": "Conversation Flow Engine", "dueDate": "2025-07-18", "amount": 400 },
+      { "title": "Helpdesk Integration + Testing", "dueDate": "2025-07-24", "amount": 300 }
+    ]
+  },
+  {
+    "title": "Shopify Theme Customization",
+    "description": "Modify product page layout and UX on our Shopify store.",
+    "budget": 750,
+    "skills": ["shopify", "liquid", "css"],
+    "deadline": "2025-07-14T00:00:00Z",
+    "milestones": [
+      { "title": "Initial Design Draft", "dueDate": "2025-07-09", "amount": 250 },
+      { "title": "Development & Preview", "dueDate": "2025-07-12", "amount": 300 },
+      { "title": "Deployment & Final Fixes", "dueDate": "2025-07-14", "amount": 200 }
+    ]
+  },
+  {
+    "title": "Logo and Brand Identity",
+    "description": "Need a logo, fonts, and palette for our food startup.",
+    "budget": 300,
+    "skills": ["logo-design", "branding", "illustrator"],
+    "deadline": "2025-07-09T00:00:00Z",
+    "milestones": [
+      { "title": "Logo Concepts", "dueDate": "2025-07-07", "amount": 100 },
+      { "title": "Final Branding Pack", "dueDate": "2025-07-09", "amount": 200 }
+    ]
+  },
+  {
+    "title": "Improve WordPress Performance",
+    "description": "Fix speed issues and optimize WordPress site for GTMetrix.",
+    "budget": 500,
+    "skills": ["wordpress", "pagespeed", "cdn"],
+    "deadline": "2025-07-13T00:00:00Z",
+    "milestones": [
+      { "title": "Audit and Diagnostics", "dueDate": "2025-07-08", "amount": 100 },
+      { "title": "Image and Caching Fixes", "dueDate": "2025-07-10", "amount": 200 },
+      { "title": "Final Optimization", "dueDate": "2025-07-12", "amount": 200 }
+    ]
+  }
+]

@@ -1,0 +1,5603 @@
+(e.g., resolved, rejected)
+ 
+version: '3.9'
+
+services:
+  freelance-api:
+    build: .
+    container_name: freelance-api
+    ports:
+      - "4000:4000"
+ env_file:
+      - .env
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27018/FREELANCE_API
+      - JWT_SECRET=${JWT_SECRET}
+      - GMAIL_USER=${GMAIL_USER}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - CLIENT_URL=http://localhost:4000
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongo
+    command: nodemon server.js
+
+  mongo:
+    image: mongo:6
+    container_name: freelance_mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+ 
+version: '3.9'
+
+services:
+  freelance-api:
+    build: .
+     container_name: freelance-api
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+    - MONGO_URI = mongodb://localhost:27017/FREELANCE_API
+      - JWT_SECRET=${JWT_SECRET}
+      - GMAIL_USER=${GMAIL_USER}
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+      - CLIENT_URL=http://localhost:3900
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+    volumes:
+       - .:/app
+      - ./uploads:/app/uploads
+
+          depends_on:
+      - mongo
+
+mongo:
+    image: mongo:6
+    container_name: freelance_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+    command: nodemon  server.js
+
+ 
+ - MONGO_URI=mongodb://mongo:27017/
+ 
+  - .:/usr/src/app
+      - /usr/src/app/node_modules
+ 
+DEV_TRACKER
+ 
+      - NODE_ENV=production
+ 
+     - PORT=3900
+ 
+FROM node:18-alpine
+ 
+src/app
+ 
+CMD ["node", "server.js"]
+ 
+allbackURL: "http://localhost:4000/auth/github/callback",
+ 
+ff62d3c1a9bd0707bd417d13863c08e3d6e6d7x
+ 
+23liJbaIpf2TBNgp5N
+ 
+370602927470-01hb466je0nqkj84jqqolqcb5thr6j05.apps.googleusercontent.com
+ 
+OCSPX-qoKeMxsqTcpoUr3pCnvFSgG7Z_nF
+ 
+llbackURL: "/auth/github/callback",
+ 
+  callbackURL: "/auth/google/callback",
+ 
+onst getAdminOverview = async (req, res, next) => {
+  try {
+    if (req.user.role !== "admin") {
+      logger.warn(`Unauthorized admin overview access attempt by user ${req.user.id}`);
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+ 
+    const [users, jobs, proposals, contracts] = await Promise.all([
+      User.countDocuments(),
+      Job.countDocuments(),
+      Proposal.countDocuments(),
+      Contract.countDocuments(),
+    ]);
+
+    const revenueAgg = await Transaction.aggregate([
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const totalRevenue = revenueAgg[0]?.total || 0;
+
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(`${currentYear}-01-01`);
+
+
+ 
+    const yearEnd = new Date(`${currentYear}-12-31T23:59:59.999Z`);
+
+    const [monthlyUsers, monthlyRevenue] = await Promise.all([
+      User.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: yearStart, $lte: yearEnd },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+            newUsers: { $sum: 1 },
+          },
+        },
+      ]),
+      Transaction.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: yearStart, $lte: yearEnd },
+          },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+            revenue: { $sum: "$amount" },
+          },
+        },
+      ]),
+    ]);
+
+    // Initialize all 12 months
+    const monthlyStats = {};
+    for (let m = 0; m < 12; m++) {
+      const key = `${currentYear}-${String(m + 1).padStart(2, "0")}`;
+      monthlyStats[key] = {
+        newUsers: 0,
+        revenue: 0,
+      };
+    }
+
+    // Fill in data from DB
+    monthlyUsers.forEach((entry) => {
+      if (monthlyStats[entry._id]) {
+        monthlyStats[entry._id].newUsers = entry.newUsers;
+      }
+    });
+
+    monthlyRevenue.forEach((entry) => {
+      if (monthlyStats[entry._id]) {
+        monthlyStats[entry._id].revenue = entry.revenue;
+      }
+    });
+
+    logger.info("Admin overview stats retrieved");
+
+    res.json({
+      metrics: {
+        users,
+        jobs,
+        proposals,
+        contracts,
+        totalRevenue,
+      },
+      monthlyStats,
+    });
+
+  } catch (err) {
+    logger.error("Failed to fetch admin overview", err);
+    next(err);
+  }
+};
+
+ 
+module.exports = {
+  getAdminOverview,
+};
+
+
+
+ 
+const getAdminOverview = async (req, res, next) => {
+  try {
+    if (req.user.role !== "admin") {
+      logger.warn(`Unauthorized admin overview access attempt by user ${req.user.id}`);
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+
+    // Static counts
+    const [users, jobs, proposals, contracts] = await Promise.all([
+      User.countDocuments(),
+      Job.countDocuments(),
+      Proposal.countDocuments(),
+      Contract.countDocuments(),
+    ]);
+
+    // Total revenue
+    const revenueAgg = await Transaction.aggregate([
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const totalRevenue = revenueAgg[0]?.total || 0;
+
+    // Monthly new users
+    const monthlyUsers = await User.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          newUsers: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Monthly revenue
+    const monthlyRevenue = await Transaction.aggregate([
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          revenue: { $sum: "$amount" },
+        },
+      },
+    ]);
+
+    // Merge monthly stats into a dictionary
+    const monthlyStats = {};
+
+    monthlyUsers.forEach((entry) => {
+      monthlyStats[entry._id] = {
+        newUsers: entry.newUsers,
+        revenue: 0, // will be updated
+      };
+    });
+
+    monthlyRevenue.forEach((entry) => {
+      if (!monthlyStats[entry._id]) {
+        monthlyStats[entry._id] = { newUsers: 0, revenue: entry.revenue };
+      } else {
+        monthlyStats[entry._id].revenue = entry.revenue;
+      }
+    });
+
+    logger.info("Admin overview stats retrieved");
+
+    res.json({
+      metrics: {
+        users,
+        jobs,
+        proposals,
+        contracts,
+        totalRevenue,
+      },
+      monthlyStats,
+    });
+
+  } catch (err) {
+    logger.error("Failed to fetch admin overview", err);
+    next(err);
+  }
+};
+ 
+module.exports = {
+  getAdminOverview,
+};
+ 
+const getAdminOverview = async (req, res, next) => {
+  try {
+    if (req.user.role !== "admin") {
+      logger.warn(`Unauthorized admin overview access attempt by user ${req.user.id}`);
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+
+    const users = await User.countDocuments();
+    const jobs = await Job.countDocuments();
+    const proposals = await Proposal.countDocuments();
+    const contracts = await Contract.countDocuments();
+    const revenue = await Transaction.aggregate([
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    logger.info("Admin overview stats retrieved");
+
+    res.json({
+      metrics: {
+        users,
+        jobs,
+        proposals,
+        contracts,
+        totalRevenue: revenue[0]?.total || 0,
+      },
+    });
+  } catch (err) {
+    logger.error("Failed to fetch admin overview", err);
+    next(err);
+  }
+};
+ 
+const mongoose = require("mongoose");
+const Contract = require("../models/Contract");
+const Invoice = require("../models/Invoice");
+const logger = require("../utils/logger");
+
+ 
+
+    // Fill empty months
+    const fullData = Array.from({ length: 12 }, (_, i)
+ 
+      const monthStat = data.find(d => d.month === i + 1);
+      return {
+        month: i + 1,
+        contractsAsClient: monthStat?.contractsAsClient || 0,
+        contractsAsFreelancer: monthStat?.contractsAsFreelancer || 0,
+        earned: monthStat?.earned || 0,
+        spent: monthStat?.spent || 0,
+        milestonesCompleted: monthStat?.milestonesCompleted || 0
+      };
+    });
+
+    logger.info(` Monthly activity retrieved for user ${userId}`);
+    res.json({ year, activity: fullData });
+
+  } catch (err) {
+    logger.error("Error fetching enhanced monthly activity:", err);
+    next(err);
+  }
+};
+ 
+const getMonthlyActivity = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const year = now.getFullYear();
+
+    const start = new Date(`${year}-01-01`);
+    const end = new Date(`${year}-12-31`);
+
+    const data = await Contract.aggregate([
+      {
+        $match: {
+          $or: [{ client: userId }, { freelancer: userId }],
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "_id",
+          foreignField: "contract",
+          as: "invoices"
+        }
+      },
+      {
+        $addFields: {
+          invoiceTotal: {
+            $sum: {
+              $map: {
+                input: "$invoices",
+                as: "inv",
+                in: "$$inv.total"
+              }
+            }
+          },
+          completedMilestones: {
+            $size: {
+              $filter: {
+                input: "$milestones",
+                as: "m",
+                cond: { $eq: ["$$m.status", "completed"] }
+              }
+            }
+          },
+          createdMonth: { $month: "$createdAt" }
+        }
+      },
+      {
+        $group: {
+          _id: "$createdMonth",
+          contractsAsClient: {
+            $sum: { $cond: [{ $eq: ["$client", userId] }, 1, 0] }
+          },
+          contractsAsFreelancer: {
+            $sum: { $cond: [{ $eq: ["$freelancer", userId] }, 1, 0] }
+          },
+          earned: {
+            $sum: { $cond: [{ $eq: ["$freelancer", userId] }, "$invoiceTotal", 0] }
+          },
+          spent: {
+            $sum: { $cond: [{ $eq: ["$client", userId] }, "$invoiceTotal", 0] }
+          },
+          milestonesCompleted: {
+            $sum: "$completedMilestones"
+          }
+        }
+      },
+      {
+        $project: {
+          month: "$_id",
+          _id: 0,
+          contractsAsClient: 1,
+          contractsAsFreelancer: 1,
+          earned: 1,
+          spent: 1,
+          milestonesCompleted: 1
+        }
+      }
+    ]);
+ 
+reatedAt" },
+          total: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const data = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      contracts: monthlyData.find((m) => m._id === i + 1)?.total || 0,
+    }));
+
+    logger.info(`Fetched monthly activity for user ${userId}`);
+    res.json({ year, activity: data });
+  } catch (err) {
+    logger.error("Failed to fetch monthly activity", err);
+    next(err);
+  }
+};
+ 
+const getMonthlyActivity = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const year = new Date().getFullYear();
+
+    const start = new Date(`${year}-01-01T00:00:00.000Z`);
+    const end = new Date(`${year}-12-31T23:59:59.999Z`);
+
+    const monthlyData = await mongoose.model("Contract").aggregate([
+      {
+        $match: {
+          $or: [
+            { client: new ObjectId(userId) },
+            { freelancer: new ObjectId(userId) }
+          ],
+          createdAt: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$c
+ 
+const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
+ 
+      $group: {
+          _id: { $month: "$createdAt" },
+          total: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const data = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      contracts: monthlyData.find((m) => m._id === i + 1)?.total || 0,
+    }));
+
+    logger.info(`Fetched monthly activity for user ${userId}`);
+    res.json({ year, activity: data });
+  } catch (err) {
+    logger.error("Failed to fetch monthly activity", err);
+    next(err);
+  }
+};
+ 
+const getUserReport = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const role = req.user.role;
+    const summary = {};
+
+    if (role === "client") {
+      const [jobsPosted, proposalsReceived, activeContracts, completedContracts, invoices] =
+        await Promise.all([
+          Job.countDocuments({ client: userId }),
+          Proposal.countDocuments({ jobClientId: userId }), // ensure this is indexed
+          Contract.countDocuments({ client: userId, status: "active" }),
+          Contract.countDocuments({ client: userId, status: "completed" }),
+          Invoice.find({ paidBy: userId, status: "paid" }),
+        ]);
+
+      summary.jobsPosted = jobsPosted;
+      summary.proposalsReceived = proposalsReceived;
+      summary.activeContracts = activeContracts;
+      summary.completedContracts = completedContracts;
+      summary.totalSpent = invoices.reduce((sum, inv) => sum + inv.total, 0);
+
+    } else if (role === "freelancer") {
+      const [proposalsSent, activeContracts, completedContracts, invoices] =
+        await Promise.all([
+          Proposal.countDocuments({ freelancer: userId }),
+          Contract.countDocuments({ freelancer: userId, status: "active" }),
+          Contract.countDocuments({ freelancer: userId, status: "completed" }),
+          Invoice.find({ issuedBy: userId, status: "paid" }),
+        ]);
+
+      summary.proposalsSent = proposalsSent;
+      summary.activeContracts = activeContracts;
+      summary.completedContracts = completedContracts;
+      summary.totalEarned = invoices.reduce((sum, inv) => sum + inv.total, 0);
+    }
+
+    res.json({ summary });
+  } catch (err) {
+    logger.error("Error generating user report:", err);
+    next(err);
+  }
+};
+ 
+const getUserReport = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const jobsPosted = await Job.countDocuments({ client: userId });
+    const proposalsSent = await Proposal.countDocuments({ freelancer: userId });
+
+    const contracts = await Contract.find({
+      $or: [{ client: userId }, { freelancer: userId }],
+    });
+
+    const activeContracts = contracts.filter((c) => c.status === "active").length;
+    const completedContracts = contracts.filter((c) => c.status === "completed").length;
+
+    const invoices = await Invoice.find({ recipient: userId });
+    const totalSpent = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    const incomeInvoices = await Invoice.find({ sender: userId });
+    const totalEarned = incomeInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    logger.info(`Generated report for user ${userId}`);
+
+    res.json({
+      summary: {
+        jobsPosted,
+        proposalsSent,
+        activeContracts,
+        completedContracts,
+        totalEarned,
+        totalSpent,
+      },
+    });
+  } catch (err) {
+    logger.error("Failed to generate user report", err);
+    next(err);
+  }
+};
+
+ 
+const deleteReview = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    console.log("deleteReview: id param =", id);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: "Invalid review ID" });
+    }
+
+    const review = await Review.findById(id).populate("contract");
+    console.log("deleteReview: req.user.id =", req.user.id);
+    console.log("deleteReview: review.from =", review ? review.from : null);
+
+    if (!review) {
+      return res.status(404).json({ msg: "Review not found" });
+    }
+
+    // Allow deletion if review.from matches user or if user is client or freelancer in contract
+    const userId = req.user.id.toString();
+    const fromId = review.from ? review.from.toString() : null;
+    const contractClientId = review.contract ? review.contract.client.toString() : null;
+    const contractFreelancerId = review.contract ? review.contract.freelancer.toString() : null;
+
+    if (
+      fromId !== userId &&
+      contractClientId !== userId &&
+      contractFreelancerId !== userId
+    ) {
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+
+    await review.deleteOne();
+    logger.info(`Review ${id} deleted by user ${req.user.id}`);
+    res.json({ msg: "Review deleted" });
+  } catch (err) {
+    logger.error("Error deleting review", err);
+    next(err);
+  }
+};
+
+module.exports = {
+ 
+our_database_name
+ 
+// models/Review.js
+ 
+const mongoose = require("mongoose");
+
+const ReviewSchema = new mongoose.Schema({
+     contract: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Contract",
+  },
+  reviewer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  reviewee: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  rating: {
+    type: Number,
+    min: 1,
+    max: 5,
+  },
+  comment: String,
+}, { timestamps: true });
+
+module.exports = mongoose.model("Review", ReviewSchema);
+
+ 
+const getPaymentById = async (req, res, next) => {
+  try {
+    const payment = await Transaction.findById(req.params.id);
+
+    if (!payment) {
+      logger.warn(`Payment not found: ${req.params.id}`);
+      return res.status(404).json({ msg: "Payment not found" });
+    }
+
+    if (!payment.user.equals(req.user.id)) {
+      logger.warn(`Unauthorized access to payment ${payment._id}`);
+      return res.status(403).json({ msg: "Unauthorized access" });
+    }
+
+    res.json({ payment });
+  } catch (err) {
+    logger.error("Error fetching payment by ID", err);
+    next(err);
+  }
+};
+ 
+const express = require("express");
+const router = express.Router();
+
+const {
+  createPaymentIntent,
+  getPaymentHistory,
+  getPaymentById,
+  storeTransaction,
+} = require("../controllers/paymentController");
+
+const authMiddleware = require("../middlewares/authMiddleware");
+
+
+
+// Create Stripe payment intent
+router.post("/intent", authMiddleware, createPaymentIntent);
+
+// Store successful transaction (can also be called from webhook)
+router.post("/transaction", authMiddleware, storeTransaction);
+
+// Get all payment history for logged-in user
+router.get("/", authMiddleware, getPaymentHistory);
+
+// Get a single payment by ID
+router.get("/:paymentId", authMiddleware, getPaymentById);
+
+module.exports = router;
+ 
+ <p><strong>Amount Paid:</strong> $${invoice.total.toFixed(2)}</p>
+ 
+const existingTx = await Transaction.findOne({ stripePaymentIntentId: paymentIntent.id });
+
+if (!existingTx) {
+  await Transaction.create({
+    stripePaymentIntentId: paymentIntent.id,
+    user: paymentIntent.metadata.userId,
+    amount: paymentIntent.amount_received / 100,
+    currency: paymentIntent.currency,
+    status: "completed",
+    invoice: invoice._id,
+  });
+
+  logger.info(`Stored new transaction for paymentIntent ${paymentIntent.id}`);
+}
+ 
+ ✅ Correct location for options
+ 
+const mongoose = require("mongoose");
+
+const TransactionSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    invoice: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Invoice",
+    },
+    stripePaymentIntentId: {
+      type: String,
+      required: true,
+    },
+    amount: {
+      type: Number,
+      required: true,
+    },
+    currency: {
+      type: String,
+      default: "usd",
+    },
+    status: {
+      type: String,
+      enum: ["requires_payment_method", "requires_confirmation", "requires_action", "processing", "succeeded", "canceled", "failed", "completed"],
+      default: "requires_payment_method",
+    },
+    reference: {
+      type: String,
+    },
+  },
+  stripePaymentIntentId: String,
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Transaction", TransactionSchema);
+ 
+const mongoose = require("mongoose");
+
+const TransactionSchema = new mongoose.Schema({
+
+    user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  amount: Number,
+  type: {
+    type: String,
+    enum: ["credit", "debit"],
+  },
+  status: {
+    type: String,
+    enum: ["pending", "success", "failed"],
+    default: "pending",
+  },
+  reference: String,
+}, { timestamps: true });
+
+module.exports = mongoose.model("Transaction", TransactionSchema);
+ 
+    // 🔁 Check if this email was invited to any orgs
+ 
+router.post("/leave", authMiddleware, leaveOrganization);
+ 
+router.delete("/members/:memberId", authMiddleware, removeMember);
+ 
+const removeMember = async (req, res, next) => {
+  try {
+    const { orgId, userId } = req.params;
+
+    const org = await Organization.findById(orgId);
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    if (!org.owner.equals(req.user.id)) {
+      return res.status(403).json({ msg: "Only the owner can remove members" });
+    }
+
+    org.members = org.members.filter((id) => id.toString() !== userId);
+    await org.save();
+
+    logger.info(`User ${userId} removed from org ${orgId}`);
+    res.json({ msg: "Member removed", organization: org });
+  } catch (err) {
+    logger.error("Error removing member", err);
+    next(err);
+  }
+};
+ 
+router.put("/", authMiddleware, updateOrganization);
+ 
+router.get("/members", authMiddleware, getMembers);
+ 
+
+const Organization = require("../models/Organization");
+const User = require("../models/User");
+const logger = require("../utils/logger");
+ 
+const createOrganization = async (req, res, next) => {
+  try {
+    const { name, description } = req.body;
+
+    const org = await Organization.create({
+      name,
+      description,
+      owner: req.user.id,
+      members: [{ user: req.user.id, role: "admin" }],
+    });
+
+    logger.info(`Organization "${name}" created by user ${req.user.id}`);
+    res.status(201).json({ msg: "Organization created", organization: org });
+  } catch (err) {
+    logger.error("Error creating organization", err);
+    next(err);
+  }
+};
+ 
+    // User exists — normal add
+ 
+// User does not exist — store invite
+ 
+const inviteMember = async (req, res, next) => {
+  try {
+    const { organizationId, email } = req.body;
+
+    const org = await Organization.findById(organizationId);
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    if (!org.owner.equals(req.user.id)) {
+      return res.status(403).json({ msg: "Only the owner can invite members" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    if (org.members.includes(user._id)) {
+      return res.status(400).json({ msg: "User is already a member" });
+    }
+
+    org.members.push(user._id);
+    await org.save();
+
+    await sendEmail({
+      to: email,
+      subject: "You’ve been added to an organization",
+      text: `You've been added to the organization "${org.name}".`,
+    });
+
+    logger.info(`User ${user._id} invited to org ${organizationId} by ${req.user.id}`);
+    res.json({ msg: "Member invited and added", organization: org });
+  } catch (err) {
+    logger.error("Error inviting member", err);
+    next(err);
+  }
+};
+
+ 
+// ✅ keep ref: "User" (the actual model name)
+ 
+optional: to standardize
+ 
+const mongoose = require("mongoose");
+
+const NotificationSchema = new mongoose.Schema({
+    recipient: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  type: String,
+  message: String,
+  isRead: {
+    type: Boolean,
+    default: false,
+  },
+  link: String,
+}, { timestamps: true });
+
+module.exports = mongoose.model ("Notification", NotificationSchema);
+ 
+ user
+ 
+} catch (err) {
+    logger.error("Error deleting milestone:", err);
+    next(err);
+  }
+};
+ 
+const deleteMilestone = async (req, res, next) => {
+  try {
+    const { jobId, milestoneId } = req.params;
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      logger.warn(`Job not found for ID: ${jobId}`);
+      return res.status(404).json({ msg: "Job not found" });
+    }
+
+    const milestone = job.milestones.id(milestoneId);
+    if (!milestone) {
+      logger.warn(`Milestone not found: ${milestoneId}`);
+      return res.status(404).json({ msg: "Milestone not found" });
+    }
+
+    milestone.remove();
+    await job.save();
+
+    logger.info(`Milestone ${milestoneId} deleted from Job: ${jobId}`);
+    res.json({ msg: "Milestone deleted" });
+ 
+router.delete("/:milestoneId", authMiddleware, roleMiddleware("client"), deleteMilestone);
+ 
+router.put("/:milestoneId", authMiddleware, updateMilestone);
+ 
+ const express = require("express");
+  const cors = require("cors");
+  const session = require("express-session");
+  const passport = require("passport");
+  const errorHandler = require("./middlewares/errorMiddleware");
+  require("dotenv").config();
+  require("./config/passport");
+ 
+const express = require("express");
+const router = express.Router();
+const stripe = require("../config/stripe");
+const Invoice = require("../models/Invoice");
+const mongoose = require("mongoose");
+const { stripeWebhookHandler } = require("../controllers/webhookController");
+
+router.post("/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error(" Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object;
+    const invoiceId = paymentIntent.metadata.invoiceId;
+
+    if (!invoiceId) {
+      return res.status(400).json({ msg: "Missing invoice ID in metadata" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(invoiceId)) {
+      console.error(" Invalid invoice ID in metadata:", invoiceId);
+      return res.status(400).json({ msg: "Invalid invoice ID in metadata" });
+    }
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (invoice && invoice.status !== "paid") {
+      invoice.status = "paid";
+      invoice.paidAt = new Date();
+      await invoice.save();
+
+      console.log(` Invoice ${invoiceId} marked as paid via webhook`);
+    }
+  }
+
+  res.json({ received: true });
+});
+
+module.exports = router;
+
+ 
+ogger.info
+ 
+       try {
+          await sendEmail({
+            to: recipientEmail,
+            subject: ` Payment Receipt – Invoice #${invoice._id}`,
+            html: receiptHtml,
+            attachments: [
+              {
+                filename: filename,
+                path: filepath,
+                contentType: "application/pdf"
+              },
+            ],
+          });
+ 
+<p>You've been paid for your work. Great job!</p>
+ 
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+
+/**
+ * Generate an invoice PDF and save to the specified path
+ * @param {Object} invoice - Mongoose invoice document
+ * @param {string} filepath - Full path to save the PDF file
+ * @returns {Promise<void>}
+ */
+async function generateInvoicePDF(invoice, filepath) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+
+    const stream = fs.createWriteStream(filepath);
+    doc.pipe(stream);
+
+    // Header
+    doc
+      .fontSize(20)
+      .text("INVOICE", { align: "center" })
+      .moveDown();
+
+    // Invoice Info
+    doc
+      .fontSize(12)
+      .text(`Invoice ID: ${invoice._id}`)
+      .text(`Issued By: ${invoice.issuedBy.name} (${invoice.issuedBy.email})`)
+      .text(`Total: $${invoice.total.toFixed(2)}`)
+      .text(`Status: ${invoice.status}`)
+      .text(`Issued On: ${new Date(invoice.createdAt).toLocaleString()}`)
+      .text(`Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}`)
+      .text(`Paid At: ${invoice.paidAt ? new Date(invoice.paidAt).toLocaleString() : 'N/A'}`)
+      .moveDown();
+
+    // Items Table
+    doc.fontSize(14).text("Items", { underline: true }).moveDown();
+
+    invoice.items.forEach((item, i) => {
+      doc
+        .fontSize(12)
+        .text(`${i + 1}. ${item.description}`, { continued: true })
+        .text(` - Qty: ${item.quantity}`, { continued: true })
+        .text(` × $${item.unitPrice.toFixed(2)}`, { continued: true })
+        .text(` = $${(item.quantity * item.unitPrice).toFixed(2)}`);
+    });
+
+    // Footer
+    doc.moveDown(2).fontSize(10).text("Thank you for your business!", { align: "center" });
+
+    doc.end();
+
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+}
+
+module.exports = generateInvoicePDF;
+ 
+const stripe = require("../config/stripe");
+const logger = require("../utils/logger");
+const fs = require("fs");
+const path = require("path");
+const Invoice = require("../models/Invoice");
+const Transaction = require("../models/Transaction");
+const generateInvoicePDF = require("../utils/pdfHelper");
+const sendEmail = require("../utils/mailer");
+
+// Load temp dir from .env or fallback
+const TEMP_DIR = process.env.TEMP_DIR || path.join(__dirname, "../temp");
+
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+const stripeWebhookHandler = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    logger.error(" Stripe webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
+        const invoiceId = paymentIntent.metadata?.invoiceId;
+
+        if (!invoiceId) {
+          logger.warn(" Missing invoiceId in metadata");
+          break;
+        }
+
+        const invoice = await Invoice.findById(invoiceId)
+          .populate("issuedBy", "name email")
+          .populate("paidBy", "name email");
+
+        if (!invoice) {
+          logger.warn(` Invoice not found: ${invoiceId}`);
+          break;
+        }
+
+        if (invoice.status === "paid") {
+          logger.info(` Invoice ${invoiceId} already marked as paid`);
+          break;
+        }
+
+        invoice.status = "paid";
+        invoice.paidAt = new Date();
+        invoice.paidBy = paymentIntent.metadata.userId || invoice.paidBy;
+        await invoice.save();
+
+        logger.info(` Invoice ${invoiceId} marked as paid`);
+
+        await Transaction.findOneAndUpdate(
+          { stripePaymentIntentId: paymentIntent.id },
+          { status: "completed" }
+        );
+
+        //  Try to determine email recipient
+        const recipientEmail = invoice.paidBy?.email || invoice.issuedBy?.email;
+        logger.info(`📧 Preparing to send receipt to: ${recipientEmail}`);
+
+        if (!recipientEmail) {
+          logger.warn(` No recipient email found for invoice ${invoice._id}`);
+          break;
+        }
+
+        //  Generate PDF
+        const filename = `receipt-${invoice._id}.pdf`;
+        const filepath = path.join(TEMP_DIR, filename);
+        await generateInvoicePDF(invoice, filepath);
+
+        const receiptHtml = `
+         <h2>Invoice  Confirmation</h2>
+<p>We’ve received your payment Thank you for your trust and partnership.</p>
+<p><strong>Invoice ID:</strong> ${invoice._id}</p>
+<p><strong>Amount Paid:</strong> $${invoice.total.toFixed(2)}</p>
+<p><strong>Status:</strong> ${invoice.status}</p>
+<p><strong>Paid At:</strong> ${invoice.paidAt.toISOString()}</p>
+<br/>
+<p>We appreciate your business and look forward to working with you again.</p>
+<p>— Rolo Enterprises</p>
+        `;
+
+        try {
+          await sendEmail({
+            to: recipientEmail,
+            subject: ` Payment Receipt – Invoice #${invoice._id}`,
+            html: receiptHtml,
+            attachments: [
+              {
+                filename,
+                path: filepath,
+              },
+            ],
+          });
+
+          logger.info(` Receipt email sent to ${recipientEmail}`);
+        } catch (emailErr) {
+          logger.error(` Failed to send receipt email: ${emailErr.message}`);
+        }
+
+        //  Delete PDF after sending
+        fs.unlink(filepath, (err) => {
+          if (err) logger.warn(` Temp file cleanup failed: ${err.message}`);
+        });
+
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const failedInvoice = event.data.object;
+        logger.warn(` Invoice payment failed: ${failedInvoice.id}`);
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        logger.info(` Subscription cancelled: ${event.data.object.id}`);
+        break;
+      }
+
+      default:
+        logger.info(`Unhandled Stripe event: ${event.type}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error(" Webhook processing error:", err.message);
+    res.status(500).json({ error: "Internal webhook error" });
+  }
+};
+
+module.exports = {
+  stripeWebhookHandler,
+};
+ 
+const express = require("express");
+const router = express.Router();
+const { getJobClient } = require("../controllers/debugController");
+
+router.get("/job/:jobId/client", getJobClient);
+
+module.exports = router;
+
+ 
+<p>We’ve received your payme Thank you for your trust and partnership.</p>
+ 
+Payment
+ 
+ <h2>Payment Receipt</h2>
+          <p>Thank you for your payment.</p>
+          <p><strong>Invoice ID:</strong> ${invoice._id}</p>
+          <p><strong>Amount Paid:</strong> $${invoice.total.toFixed(2)}</p>
+          <p><strong>Status:</strong> ${invoice.status}</p>
+          <p><strong>Paid At:</strong> ${invoice.paidAt.toISOString()}</p>
+          <br/>
+          <p>— Rolo Enterprises</p>
+ 
+const stripe = require("../config/stripe");
+const logger = require("../utils/logger");
+const fs = require("fs");
+const path = require("path");
+const Invoice = require("../models/Invoice");
+const Transaction = require("../models/Transaction");
+const generateInvoicePDF = require("../utils/pdfHelper");
+const sendEmail = require("../utils/mailer");
+
+//  Load temp dir from .env or fallback
+const TEMP_DIR = process.env.TEMP_DIR || path.join(__dirname, "../temp");
+
+//  Ensure the temp dir exists
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+const stripeWebhookHandler = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    logger.error("Stripe webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
+        const invoiceId = paymentIntent.metadata?.invoiceId;
+
+        if (!invoiceId) {
+          logger.warn("Missing invoiceId in metadata");
+          break;
+        }
+
+        const invoice = await Invoice.findById(invoiceId)
+          .populate("issuedBy", "name email")
+          .populate("paidBy", "name email");
+
+        if (!invoice) {
+          logger.warn(`Invoice not found: ${invoiceId}`);
+          break;
+        }
+
+        if (invoice.status === "paid") {
+          logger.info(`Invoice ${invoiceId} already paid`);
+          break;
+        }
+
+        invoice.status = "paid";
+        invoice.paidAt = new Date();
+        invoice.paidBy = paymentIntent.metadata.userId || invoice.paidBy;
+        await invoice.save();
+
+        logger.info(` Invoice ${invoiceId} marked as paid`);
+
+        // Update matching transaction if available
+        await Transaction.findOneAndUpdate(
+          { stripePaymentIntentId: paymentIntent.id },
+          { status: "completed" }
+        );
+
+        // Generate PDF receipt
+        const filename = `receipt-${invoice._id}.pdf`;
+        const filepath = path.join(TEMP_DIR, filename);
+        await generateInvoicePDF(invoice, filepath);
+
+        // Send email with PDF attached
+        const receiptHtml = `
+          <h2>Payment Receipt</h2>
+          <p>Thank you for your payment.</p>
+          <p><strong>Invoice ID:</strong> ${invoice._id}</p>
+          <p><strong>Amount Paid:</strong> $${invoice.total.toFixed(2)}</p>
+          <p><strong>Status:</strong> ${invoice.status}</p>
+          <p><strong>Paid At:</strong> ${invoice.paidAt.toISOString()}</p>
+          <br/>
+          <p>— Rolo Enterprises</p>
+        `;
+
+        await sendEmail({
+          to: invoice.paidBy?.email || invoice.issuedBy.email,
+          subject: ` Payment Receipt – Invoice #${invoice._id}`,
+          html: receiptHtml,
+          attachments: [
+            {
+              filename,
+              path: filepath,
+            },
+          ],
+        });
+
+        logger.info(` Receipt email sent for invoice ${invoice._id}`);
+
+        // Clean up temporary PDF
+        fs.unlink(filepath, (err) => {
+          if (err) logger.warn(" Could not delete temp PDF:", err.message);
+        });
+
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const failedInvoice = event.data.object;
+        logger.warn(` Invoice payment failed: ${failedInvoice.id}`);
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        logger.info(` Subscription cancelled: ${event.data.object.id}`);
+        break;
+      }
+
+      default:
+        logger.info(` Unhandled Stripe event: ${event.type}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error("Webhook processing error:", err.message);
+    res.status(500).json({ error: "Internal webhook error" });
+  }
+};
+
+module.exports = {
+  stripeWebhookHandler,
+};
+ 
+// test-email.js
+const sendEmail = require("./utils/mailer");
+
+sendEmail({
+  to: "your@email.com",
+  subject: "Test Email from Rolo",
+  html: "<p>If you're seeing this, email is working 🎯</p>",
+}).then(() => {
+  console.log("✅ Email sent!");
+}).catch((err) => {
+  console.error("❌ Failed to send email:", err);
+});
+ 
+const stripe = require("../config/stripe");
+const logger = require("../utils/logger");
+const fs = require("fs");
+const path = require("path");
+const Invoice = require("../models/Invoice");
+const Transaction = require("../models/Transaction");
+const generateInvoicePDF = require("../utils/pdfHelper");
+const sendEmail = require("../utils/mailer"); 
+
+const stripeWebhookHandler = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    logger.error("Stripe webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
+        const invoiceId = paymentIntent.metadata?.invoiceId;
+
+        if (!invoiceId) {
+          logger.warn("Missing invoiceId in metadata");
+          break;
+        }
+
+        const invoice = await Invoice.findById(invoiceId)
+          .populate("issuedBy", "name email")
+          .populate("paidBy", "name email");
+
+        if (!invoice) {
+          logger.warn(`Invoice not found: ${invoiceId}`);
+          break;
+        }
+
+        if (invoice.status === "paid") {
+          logger.info(`Invoice ${invoiceId} already paid`);
+          break;
+        }
+
+        invoice.status = "paid";
+        invoice.paidAt = new Date();
+        invoice.paidBy = paymentIntent.metadata.userId || invoice.paidBy;
+        await invoice.save();
+
+        logger.info(` Invoice ${invoiceId} marked as paid`);
+
+        //  Optionally update transaction record
+        await Transaction.findOneAndUpdate(
+          { stripePaymentIntentId: paymentIntent.id },
+          { status: "completed" }
+        );
+
+        //  Generate PDF
+        const filename = `receipt-${invoice._id}.pdf`;
+        const filepath = path.join(__dirname, `../temp/${filename}`);
+        await generateInvoicePDF(invoice, filepath);
+
+        //  Send email with PDF attached
+        const receiptHtml = `
+          <h2>Payment Receipt</h2>
+          <p>Thank you for your payment.</p>
+          <p><strong>Invoice ID:</strong> ${invoice._id}</p>
+          <p><strong>Amount Paid:</strong> $${invoice.total.toFixed(2)}</p>
+          <p><strong>Status:</strong> ${invoice.status}</p>
+          <p><strong>Paid At:</strong> ${invoice.paidAt.toISOString()}</p>
+          <br/>
+          <p>— Rolo Enterprises</p>
+        `;
+
+        await sendEmail({
+          to: invoice.paidBy?.email || invoice.issuedBy.email,
+          subject: ` Payment Receipt – Invoice #${invoice._id}`,
+          html: receiptHtml,
+          attachments: [
+            {
+              filename,
+              path: filepath,
+            },
+          ],
+        });
+
+        logger.info(` Receipt email sent for invoice ${invoice._id}`);
+
+        //  Cleanup
+        fs.unlink(filepath, (err) => {
+          if (err) logger.warn("Could not delete temp PDF:", err.message);
+        });
+
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const failedInvoice = event.data.object;
+        logger.warn(` Invoice payment failed: ${failedInvoice.id}`);
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        logger.info(` Subscription cancelled: ${event.data.object.id}`);
+        break;
+      }
+
+      default:
+        logger.info(`Unhandled Stripe event: ${event.type}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error("Webhook processing error:", err.message);
+    res.status(500).json({ error: "Internal webhook error" });
+  }
+};
+
+module.exports = {
+  stripeWebhookHandler,
+};
+ 
+/ ✅ Ensure you have this
+ 
+const stripe = require("../config/stripe");
+const logger = require("../utils/logger");
+const Transaction = require("../models/Transaction");
+const Invoice = require("../models/Invoice");
+const generateInvoicePDF = require("../utils/pdfHelper"); 
+
+const stripeWebhookHandler = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    logger.error(" Stripe webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
+
+        logger.info(` Payment successful: ${paymentIntent.id}`);
+
+        const invoiceId = paymentIntent.metadata?.invoiceId;
+        if (!invoiceId) {
+          logger.warn(" No invoiceId found in payment intent metadata.");
+          break;
+        }
+
+        const invoice = await Invoice.findById(invoiceId);
+        if (!invoice) {
+          logger.warn(` Invoice not found for ID: ${invoiceId}`);
+          break;
+        }
+
+        if (invoice.status === "paid") {
+          logger.info(` Invoice ${invoice._id} already marked as paid.`);
+          break;
+        }
+
+        invoice.status = "paid";
+        invoice.paidAt = new Date();
+        await invoice.save();
+
+        logger.info(`💸 Invoice ${invoice._id} marked as paid via Stripe webhook`);
+
+        // Optionally update a matching Transaction record
+        await Transaction.findOneAndUpdate(
+          { stripePaymentIntentId: paymentIntent.id },
+          { status: "completed" }
+        );
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const failedInvoice = event.data.object;
+        logger.warn(` Invoice payment failed: ${failedInvoice.id}`);
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        logger.info(` Subscription cancelled: ${event.data.object.id}`);
+        break;
+      }
+
+      default:
+        logger.info(` Unhandled event type: ${event.type}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error(" Webhook processing error:", err.message);
+    res.status(500).json({ error: "Internal error handling webhook" });
+  }
+};
+
+case "payment_intent.succeeded": {
+  const paymentIntent = event.data.object;
+  const invoiceId = paymentIntent.metadata?.invoiceId;
+
+  if (!invoiceId) {
+    logger.warn("Missing invoiceId in metadata");
+    return;
+  }
+
+  const invoice = await Invoice.findById(invoiceId)
+    .populate("issuedBy", "name email")
+    .populate("paidBy", "name email");
+
+  if (!invoice) {
+    logger.warn(`Invoice not found: ${invoiceId}`);
+    return;
+  }
+
+  if (invoice.status === "paid") {
+    logger.info(`Invoice ${invoiceId} already paid`);
+    return;
+  }
+
+  invoice.status = "paid";
+  invoice.paidAt = new Date();
+  invoice.paidBy = paymentIntent.metadata.userId || undefined;
+  await invoice.save();
+
+  logger.info(`✅ Invoice ${invoiceId} marked as paid`);
+
+  // ✅ Generate PDF
+  const filename = `receipt-${invoice._id}.pdf`;
+  const filepath = path.join(__dirname, `../temp/${filename}`);
+  await generateInvoicePDF(invoice, filepath); // write file to disk
+
+  // ✅ Send Receipt Email with PDF
+  const receiptHtml = `
+    <h2>Payment Receipt</h2>
+    <p>Thank you for your payment.</p>
+    <p><strong>Invoice ID:</strong> ${invoice._id}</p>
+    <p><strong>Amount Paid:</strong> $${invoice.total.toFixed(2)}</p>
+    <p><strong>Status:</strong> ${invoice.status}</p>
+    <p><strong>Paid At:</strong> ${invoice.paidAt.toISOString()}</p>
+    <br/>
+    <p>— Rolo Enterprises</p>
+  `;
+
+  await sendEmail({
+    to: invoice.paidBy?.email || invoice.issuedBy.email,
+    subject: "💰 Payment Receipt - Invoice " + invoice._id,
+    html: receiptHtml,
+    attachments: [
+      {
+        filename,
+        path: filepath,
+      },
+    ],
+  });
+
+  logger.info(`📧 Receipt PDF sent for invoice ${invoice._id}`);
+
+  // ✅ Cleanup
+  fs.unlink(filepath, () => {});
+  break;
+}
+
+module.exports = {
+  stripeWebhookHandler,
+};
+ 
+const sendEmail = require("../utils/sendEmail");
+ 
+const stripe = require("../config/stripe");
+const logger = require("../utils/logger"); 
+const Transaction = require("../models/Transaction"); 
+
+const stripeWebhookHandler = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    logger.error(" Stripe webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+
+  try {
+    switch (event.type) {
+      case "payment_intent.succeeded":
+        const paymentIntent = event.data.object;
+
+        logger.info(` Payment successful: ${paymentIntent.id}`);
+
+        //  TODO:  find metadata to update DB:
+        // const userId = paymentIntent.metadata.userId;
+        // const invoiceId = paymentIntent.metadata.invoiceId;
+
+        await Transaction.findOneAndUpdate(
+          { stripePaymentIntentId: paymentIntent.id },
+          { status: "completed" }
+        );
+
+        break;
+
+      case "invoice.payment_failed":
+        const failedInvoice = event.data.object;
+        logger.warn(`Invoice payment failed: ${failedInvoice.id}`);
+        break;
+
+      case "customer.subscription.deleted":
+        logger.info(` Subscription cancelled: ${event.data.object.id}`);
+        break;
+
+      default:
+        logger.info(` Unhandled event type: ${event.type}`);
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error(" Webhook processing error:", err.message);
+    res.status(500).json({ error: "Internal error handling webhook" });
+  }
+};
+
+module.exports = {
+  stripeWebhookHandler,
+};
+ 
+// routes/webhookRoutes.js
+ 
+const express = require("express");
+const { stripeWebhookHandler } = require("../controllers/webhookController");
+
+const router = express.Router();
+
+
+router.post("/", express.raw({ type: "application/json" }), stripeWebhookHandler);
+
+module.exports = router;
+ 
+STRIPE_WEBHOOK_SECRET = 
+ 
+ if (
+      contract.client.toString() !== req.user.id &&
+      contract.freelancer.toString() !== req.user.id
+    ) {
+      logger.warn("Unauthorized access to single contract");
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+ 
+// or "pending" if you want manual freelancer approval
+ 
+// Create New Contract (Client)
+const createContract = async (req, res, next) => {
+  try {
+    const { jobId, freelancerId, terms, startDate, endDate } = req.body;
+
+    if (!jobId || !freelancerId || !terms || !startDate || !endDate) {
+      logger.warn("Missing contract fields");
+      return res.status(400).json({ msg: "All fields are required" });
+    }
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      logger.warn(`Job not found: ${jobId}`);
+      return res.status(404).json({ msg: "Job not found" });
+    }
+
+    if (job.client.toString() !== req.user.id) {
+      logger.warn(`User ${req.user.id} is not the owner of job ${jobId}`);
+      return res.status(403).json({ msg: "Only the client who owns the job can create contracts" });
+    }
+    
+    const proposalExists = await Proposal.findOne({
+      job: jobId,
+      freelancer: freelancerId,
+    });
+
+    if (!proposalExists) {
+      return res.status(400).json({
+        msg: "Freelancer has not submitted a proposal for this job.",
+      });
+    }
+
+    const existing = await Contract.findOne({ job: jobId, freelancer: freelancerId });
+    if (existing) {
+      logger.warn("Duplicate contract attempt");
+      return res.status(409).json({ msg: "Contract already exists" });
+    }
+
+    const contract = await Contract.create({
+      job: jobId,
+      client: req.user.id,
+      freelancer: freelancerId,
+      terms,
+      startDate,
+      endDate,
+    });
+
+    logger.info(`Contract created by ${req.user.id} for job ${jobId}`);
+    res.status(201).json({ msg: "Contract created", contract });
+  } catch (err) {
+    logger.error("Error creating contract", err);
+    next(err);
+  }
+};
+ 
+// Extract token only 
+ 
+// Delete a proposal
+ 
+// utils/mailer.js
+ 
+/ utils/mailer.js
+ 
+// e.g. [{ filename, content, contentType }]
+ 
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
+
+const sendEmail = async ({ to, subject, text, html, attachments }) => {
+  return transporter.sendMail({
+    from: process.env.GMAIL_USER,
+    to,
+    subject,
+    text,
+    html,
+    attachments,
+  });
+};
+
+module.exports = sendEmail;
+ 
+router.delete("/", authMiddleware, deleteAvailability);    
+ 
+  const token = jwt.sign(
+  { id: user._id, role: user.role },
+  process.env.JWT_SECRET,
+  { expiresIn: '2h' }
+);
+ 
+
+require("dotenv").config();
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
+
+const seedAdmin = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+
+    const email = "admin@example.com";
+    const password = "admin123";
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const existing = await User.findOne({ email });
+
+    if (existing) {
+      console.log(" Admin user already exists.");
+    } else {
+      const admin = await User.create({
+        name: "Super Admin",
+        email,
+        password: hashedPassword,
+        role: "admin",
+        isVerified: true,
+      });
+
+      console.log(" Admin user created successfully:");
+      console.log({ email: admin.email, password: "admin123" });
+    }
+
+    await mongoose.disconnect();
+    process.exit();
+  } catch (err) {
+    console.error(" Failed to seed admin:", err);
+    process.exit(1);
+  }
+};
+
+seedAdmin();
+ 
+// scripts/seedAdmin.js
+ 
+// ✅ Added
+ 
+// ✅ Added
+ 
+    // Allow empty object updates to proceed without error
+ 
+const UserSchema = new mongoose.Schema({
+      name: String,
+  email: {
+    type: String,
+    unique: true,
+  },
+  password: {
+    type: String,
+    select: false,
+  },
+  role: {
+    type: String,
+    enum: ["client", "freelancer", "admin"],
+    default: "freelancer",
+  },
+  image: String,
+  cv: String,
+  bio: String,
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+     resetPasswordToken: String,
+    resetPasswordExpires: Date,
+}, { timestamps: true });
+
+ 
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+
+
+const UserSchema = new mongoose.Schema({
+      name: String,
+  email: {
+    type: String,
+    unique: true,
+  },
+  password: {
+    type: String,
+    select: false,
+  },
+  role: {
+    type: String,
+    enum: ["client", "freelancer", "admin"],
+    default: "freelancer",
+  },
+  image: String,
+  cv: String,
+  bio: String,
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+     resetPasswordToken: String,
+    resetPasswordExpires: Date,
+}, { timestamps: true });
+
+module.exports = mongoose.model("User", UserSchema);
+ 
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads"),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${file.fieldname}-${Date.now()}${ext}`);
+  },
+});
+
+
+const fileFilter = (req, file, cb) => {
+  if (!file.originalname) return cb(null, false); 
+  cb(null, true);
+};
+
+module.exports = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+ 
+router.post(
+  "/assets",
+  authMiddleware,
+  (req, res, next) => {
+    console.log("Passed authMiddleware");
+    req.on("end", () => {
+      console.log(" Request stream ended BEFORE multer");
+    });
+    next();
+  },
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cv", maxCount: 1 },
+  ]),
+  (req, res, next) => {
+    console.log(" Passed multer");
+    next();
+  },
+  uploadUserAssets
+);
+ 
+const express = require("express");
+const router = express.Router();
+
+const {
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  getAllFreelancers,
+  getUserById,
+  uploadUserAssets,
+  updateUserAssets,
+} = require("../controllers/userController");
+
+const authMiddleware = require("../middlewares/authMiddleware");
+const upload = require("../middlewares/upload"); 
+
+//  Get your own profile
+router.get("/profile", authMiddleware, getUserProfile);
+
+//  Update your profile
+router.put("/profile", authMiddleware, updateUserProfile);
+
+//  Delete your account
+router.delete("/profile", authMiddleware, deleteUserAccount);
+
+// Upload CV/image etc
+router.post(
+  "/assets",
+  authMiddleware,
+  (req, res, next) => {
+    console.log("Passed authMiddleware");
+    req.on("end", () => {
+      console.log(" Request stream ended BEFORE multer");
+    });
+    next();
+  },
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cv", maxCount: 1 },
+  ]),
+  (req, res, next) => {
+    console.log(" Passed multer");
+    next();
+  },
+  uploadUserAssets
+);
+
+
+// Update CV/image etc
+router.put("/assets", authMiddleware, upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]), updateUserAssets);
+
+// List all freelancers
+router.get("/freelancers", authMiddleware, getAllFreelancers);
+
+// Get any user by ID (admin/client viewing freelancer, etc)
+router.get("/:userId", authMiddleware, getUserById);
+
+module.exports = router;
+ 
+router.post("/assets", authMiddleware, upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]), uploadUserAssets);
+ 
+
+// Only parse JSON if it's not multipart/form-data
+ 
+// ⛔ Skip JSON parsing
+ 
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
+ 
+const express = require("express");
+const router = express.Router();
+
+const {
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  getAllFreelancers,
+  getUserById,
+  uploadUserAssets,
+  updateUserAssets,
+} = require("../controllers/userController");
+
+const authMiddleware = require("../middlewares/authMiddleware");
+const upload = require("../middlewares/upload"); 
+
+//  Get your own profile
+router.get("/profile", authMiddleware, getUserProfile);
+
+//  Update your profile
+router.put("/profile", authMiddleware, updateUserProfile);
+
+//  Delete your account
+router.delete("/profile", authMiddleware, deleteUserAccount);
+
+// Upload CV/image etc
+router.post("/assets", authMiddleware, upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]), uploadUserAssets);
+
+// Update CV/image etc
+router.put("/assets", authMiddleware, upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]), updateUserAssets);
+
+// List all freelancers
+router.get("/freelancers", authMiddleware, getAllFreelancers);
+
+// Get any user by ID (admin/client viewing freelancer, etc)
+router.get("/:userId", authMiddleware, getUserById);
+
+module.exports = router;
+ 
+// Skip invalid or empty files gracefully
+ 
+// skip empty files
+ 
+const path = require("path");
+const multer = require("multer");
+
+const assetStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, "../uploads")),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const prefix = file.fieldname === "cv" ? "cv" : "profile";
+    cb(null, `${prefix}-${Date.now()}${ext}`);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|heic|pdf|doc|docx/;
+  const isValidExt = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const isValidMime = allowedTypes.test(file.mimetype);
+  isValidExt && isValidMime ? cb(null, true) : cb(new Error("Invalid file type"));
+};
+
+module.exports = multer({
+  storage: assetStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, 
+  fileFilter,
+});
+ 
+// Apply body parsers after routes that handle file uploads
+ 
+// Move body parsers after routes that handle file uploads
+ 
+/ 5MB max
+ 
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+const uploadDir = path.join(__dirname, "../uploads");
+
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `msg-${Date.now()}${ext}`);
+  },
+});
+
+
+const fileFilter = (req, file, cb) => {
+  const allowed = /jpeg|jpg|jpg|png|heic|pdf|doc|docx/;
+  const ext = path.extname(file.originalname).toLowerCase();
+  const mime = file.mimetype;
+
+  if (allowed.test(ext) && allowed.test(mime)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Unsupported file type"), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, 
+});
+
+module.exports = upload;
+ 
+const upload = require("../middlewares/upload");
+ 
+// middlewares/messageUpload.js
+ 
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+const messageUploadDir = path.join(__dirname, "../messages");
+
+// Create dir if not exists
+if (!fs.existsSync(messageUploadDir)) {
+  fs.mkdirSync(messageUploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, messageUploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `msg-${Date.now()}${ext}`);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowed = /jpeg|jpg|png|gif|pdf|docx|mp4|mp3|webm|txt/;
+  const ext = path.extname(file.originalname).toLowerCase();
+  const isValid = allowed.test(ext) && allowed.test(file.mimetype);
+
+  if (isValid) {
+    cb(null, true);
+  } else {
+    cb(new Error("Unsupported file type"), false);
+  }
+};
+
+const uploadMessageAttachment = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB max
+});
+
+module.exports = uploadMessageAttachment;
+ 
+// body parser for JSON
+ 
+// body parser for forms
+ 
+// file uploads route
+ 
+const messageUploadDir = path.join(__dirname, "../uploads/messages");
+ 
+// 10MB
+ 
+// Optionally filter file types
+ 
+// Ensure directory exists
+ 
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads"),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `msg-${Date.now()}${ext}`);
+  },
+});
+
+module.exports = multer({ storage });
+ 
+// For file uploads like CV/image
+ 
+const path = require("path");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../uploads"));
+  },
+  filename: (req, file, cb) => {
+    cb(
+      null,
+      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+    );
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|heic|pdf|doc|docx/;
+  const isValidExt = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
+  const isValidMime = allowedTypes.test(file.mimetype);
+
+  isValidExt && isValidMime
+    ? cb(null, true)
+    : cb(new Error("Invalid file type"));
+};
+
+module.exports = multer({
+  storage,
+  limits: { fileSize: 1024 * 1024 * 5 },
+  fileFilter,
+});
+ 
+router.post(
+  "/register",
+  [
+    body("name").notEmpty().withMessage("Name is required"),
+    body("email").isEmail().withMessage("Invalid email"),
+    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
+  ],
+  validateRequest,
+  register
+);
+ 
+const { name, email, password } = req.body;
+ 
+  const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      isVerified: false,
+    });
+ 
+router.post("/register", validateRequest, register);
+ 
+const { validationResult } = require("express-validator");
+
+const validateRequest = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      msg: "Validation failed",
+      errors: errors.array().map(err => ({
+        field: err.param,
+        message: err.msg,
+      })),
+    });
+  }
+  next();
+};
+
+module.exports = validateRequest;
+ 
+ipeWebhookController
+ 
+// 👤 GET /api/users/me
+ 
+// ✏️ PUT /api/users/me
+ 
+// ❌ DELETE /api/users/me
+ 
+// 🔍 GET /api/users/freelancers
+ 
+// 👤 GET /api/users/:id
+ 
+// 📤 POST /api/users/assets
+ 
+const User = require("../models/User");
+const multer = require("../utils/multerConfig");
+const fs = require("fs");
+const path = require("path");
+
+
+const getUserProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const updateUserProfile = async (req, res, next) => {
+  try {
+    const updates = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    const allowedFields = ["name", "email", "bio", "skills", "title", "hourlyRate", "location"];
+    allowedFields.forEach((field) => {
+      if (updates[field] !== undefined) user[field] = updates[field];
+    });
+
+    if (req.file) {
+      if (user.image) {
+        fs.unlink(path.join(__dirname, "..", "uploads", user.image), () => {});
+      }
+      user.image = req.file.filename;
+    }
+
+    await user.save();
+    res.json({ msg: "Profile updated", user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const deleteUserAccount = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    await user.deleteOne();
+    res.json({ msg: "Account deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getAllFreelancers = async (req, res, next) => {
+  try {
+    const { skill, location } = req.query;
+
+    const query = {
+      role: "freelancer",
+    };
+
+    if (skill) {
+      query.skills = { $in: [skill] };
+    }
+
+    if (location) {
+      query.location = location;
+    }
+
+    const freelancers = await User.find(query).select("-password");
+    res.json({ freelancers });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 👤 GET /api/users/:id
+const getUserById = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const uploadAssets = multer.fields([
+  { name: "image", maxCount: 1 },
+  { name: "cv", maxCount: 1 },
+]);
+
+const uploadUserAssets = (req, res, next) => {
+  uploadAssets(req, res, async (err) => {
+    if (err) return next(err);
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ msg: "User not found" });
+
+      if (req.files?.image?.[0]) user.image = req.files.image[0].filename;
+      if (req.files?.cv?.[0]) user.cv = req.files.cv[0].filename;
+
+      await user.save();
+
+      res.json({ msg: "Assets uploaded", image: user.image, cv: user.cv });
+    } catch (err) {
+      next(err);
+    }
+  });
+};
+
+module.exports = {
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  getAllFreelancers,
+  getUserById,
+  uploadUserAssets,
+};
+ 
+// Create Review
+ 
+// Get Reviews for a User
+ 
+// Delete Review
+ 
+const Review = require("../models/Review");
+const User = require("../models/User");
+const Contract = require("../models/Contract");
+
+
+const createReview = async (req, res, next) => {
+  try {
+    const { rating, comment, toUserId, contractId } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ msg: "Rating must be between 1 and 5" });
+    }
+
+
+    const contract = await Contract.findById(contractId);
+    if (!contract || (!contract.client.equals(req.user.id) && !contract.freelancer.equals(req.user.id))) {
+      return res.status(403).json({ msg: "You cannot review this contract" });
+    }
+
+
+    const existing = await Review.findOne({
+      from: req.user.id,
+      to: toUserId,
+      contract: contractId,
+    });
+
+    if (existing) {
+      return res.status(400).json({ msg: "You already submitted a review" });
+    }
+
+    const review = await Review.create({
+      from: req.user.id,
+      to: toUserId,
+      rating,
+      comment,
+      contract: contractId,
+    });
+
+    res.status(201).json({ review });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getReviewsForUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    const reviews = await Review.find({ to: userId })
+      .populate("from", "name email")
+      .sort({ createdAt: -1 });
+
+    const averageRating =
+      reviews.reduce((sum, r) => sum + r.rating, 0) / (reviews.length || 1);
+
+    res.json({
+      reviews,
+      averageRating: averageRating.toFixed(1),
+      total: reviews.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const deleteReview = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const review = await Review.findById(id);
+    if (!review || !review.from.equals(req.user.id)) {
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+
+    await review.deleteOne();
+    res.json({ msg: "Review deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createReview,
+  getReviewsForUser,
+  deleteReview,
+};
+ 
+const User = require("../models/User");
+const Job = require("../models/Job");
+const Proposal = require("../models/Proposal");
+const Contract = require("../models/Contract");
+const Invoice = require("../models/Invoice");
+const Transaction = require("../models/Transaction");
+
+const getUserReport = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const jobsPosted = await Job.countDocuments({ client: userId });
+    const proposalsSent = await Proposal.countDocuments({ freelancer: userId });
+
+    const contracts = await Contract.find({
+      $or: [{ client: userId }, { freelancer: userId }],
+    });
+
+    const activeContracts = contracts.filter((c) => c.status === "active").length;
+    const completedContracts = contracts.filter((c) => c.status === "completed").length;
+
+    const invoices = await Invoice.find({ recipient: userId });
+    const totalSpent = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    const incomeInvoices = await Invoice.find({ sender: userId });
+    const totalEarned = incomeInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    res.json({
+      summary: {
+        jobsPosted,
+        proposalsSent,
+        activeContracts,
+        completedContracts,
+        totalEarned,
+        totalSpent,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMonthlyActivity = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    const year = now.getFullYear();
+
+    const monthlyData = await Contract.aggregate([
+      {
+        $match: {
+          $or: [{ client: req.user._id }, { freelancer: req.user._id }],
+          createdAt: {
+            $gte: new Date(`${year}-01-01`),
+            $lte: new Date(`${year}-12-31`),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          total: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const data = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      contracts: monthlyData.find((m) => m._id === i + 1)?.total || 0,
+    }));
+
+    res.json({ year, activity: data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAdminOverview = async (req, res, next) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+
+    const users = await User.countDocuments();
+    const jobs = await Job.countDocuments();
+    const proposals = await Proposal.countDocuments();
+    const contracts = await Contract.countDocuments();
+    const revenue = await Transaction.aggregate([
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    res.json({
+      metrics: {
+        users,
+        jobs,
+        proposals,
+        contracts,
+        totalRevenue: revenue[0]?.total || 0,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getUserReport,
+  getMonthlyActivity,
+  getAdminOverview,
+};
+ 
+const Proposal = require("../models/Proposal");
+const Job = require("../models/Job");
+const Notification = require("../models/Notification");
+
+const submitProposal = async (req, res, next) => {
+  try {
+    const { jobId, coverLetter, expectedRate, estimatedTime } = req.body;
+
+    const existing = await Proposal.findOne({
+      job: jobId,
+      freelancer: req.user.id,
+    });
+
+    if (existing) {
+      return res.status(400).json({ msg: "Proposal already submitted" });
+    }
+
+    const proposal = await Proposal.create({
+      job: jobId,
+      freelancer: req.user.id,
+      coverLetter,
+      expectedRate,
+      estimatedTime,
+    });
+
+
+    const job = await Job.findById(jobId);
+    await Notification.create({
+      user: job.client,
+      type: "proposal",
+      message: `New proposal submitted for your job: ${job.title}`,
+      data: { jobId },
+    });
+
+    res.status(201).json({ msg: "Proposal submitted", proposal });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getJobProposals = async (req, res, next) => {
+  try {
+    const jobId = req.params.jobId;
+
+    const job = await Job.findById(jobId);
+    if (!job || job.client.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Unauthorized" });
+    }
+
+    const proposals = await Proposal.find({ job: jobId })
+      .populate("freelancer", "name email skills")
+      .sort({ createdAt: -1 });
+
+    res.json({ proposals });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getMyProposals = async (req, res, next) => {
+  try {
+    const proposals = await Proposal.find({ freelancer: req.user.id })
+      .populate("job", "title budget")
+      .sort({ createdAt: -1 });
+
+    res.json({ proposals });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const respondToProposal = async (req, res, next) => {
+  try {
+    const { status } = req.body; // "accepted" or "rejected"
+    const proposal = await Proposal.findById(req.params.id).populate("job");
+
+    if (!proposal || proposal.job.client.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Unauthorized" });
+    }
+
+    proposal.status = status;
+    await proposal.save();
+
+  
+    await Notification.create({
+      user: proposal.freelancer,
+      type: "proposal_response",
+      message: `Your proposal for "${proposal.job.title}" was ${status}`,
+      data: { jobId: proposal.job._id },
+    });
+
+    res.json({ msg: `Proposal ${status}`, proposal });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteProposal = async (req, res, next) => {
+  try {
+    const proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal || proposal.freelancer.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Unauthorized" });
+    }
+
+    await proposal.deleteOne();
+    res.json({ msg: "Proposal deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  submitProposal,
+  getJobProposals,
+  getMyProposals,
+  respondToProposal,
+  deleteProposal,
+};
+ 
+// Create Stripe Payment Intent
+ 
+// Store Transaction after Webhook Trigger
+ 
+// Retrieve all payments made by current user
+ 
+// Get single payment detail
+ 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const Transaction = require("../models/Transaction");
+const Invoice = require("../models/Invoice");
+
+const createPaymentIntent = async (req, res, next) => {
+  try {
+    const { amount, currency = "usd", invoiceId } = req.body;
+
+    if (!amount) {
+      return res.status(400).json({ msg: "Amount is required" });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), 
+      currency,
+      metadata: {
+        userId: req.user.id,
+        invoiceId: invoiceId || "N/A",
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      msg: "Payment initiated",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const storeTransaction = async (stripeEvent) => {
+  const intent = stripeEvent.data.object;
+
+  const transaction = new Transaction({
+    stripeId: intent.id,
+    amount: intent.amount_received / 100,
+    currency: intent.currency,
+    status: intent.status,
+    user: intent.metadata?.userId || null,
+    invoice: intent.metadata?.invoiceId || null,
+  });
+
+  await transaction.save();
+
+
+  if (intent.metadata?.invoiceId) {
+    await Invoice.findByIdAndUpdate(intent.metadata.invoiceId, {
+      status: "paid",
+      paidAt: new Date(),
+    });
+  }
+
+  return transaction;
+};
+
+const getPaymentHistory = async (req, res, next) => {
+  try {
+    const transactions = await Transaction.find({ user: req.user.id }).sort({
+      createdAt: -1,
+    });
+
+    res.json({ transactions });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getPaymentById = async (req, res, next) => {
+  try {
+    const payment = await Transaction.findById(req.params.id);
+
+    if (!payment) {
+      return res.status(404).json({ msg: "Payment not found" });
+    }
+
+    if (!payment.user.equals(req.user.id)) {
+      return res.status(403).json({ msg: "Unauthorized access" });
+    }
+
+    res.json({ payment });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createPaymentIntent,
+  getPaymentHistory,
+  getPaymentById,
+  storeTransaction, 
+};
+ 
+// Create organization
+ 
+// Get all members
+ 
+// Invite member by email
+ 
+// Remove member
+ 
+// Update organization
+ 
+ave organization (non-owners only)
+ 
+const Organization = require("../models/Organization");
+const User = require("../models/User");
+const sendEmail = require("../utils/mailer");
+
+
+const createOrganization = async (req, res, next) => {
+  try {
+    const { name, description } = req.body;
+
+    const org = await Organization.create({
+      name,
+      description,
+      owner: req.user.id,
+      members: [req.user.id],
+    });
+
+    res.status(201).json({ msg: "Organization created", organization: org });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const inviteMember = async (req, res, next) => {
+  try {
+    const { orgId } = req.params;
+    const { email } = req.body;
+
+    const org = await Organization.findById(orgId);
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    if (!org.owner.equals(req.user.id))
+      return res.status(403).json({ msg: "Only the owner can invite members" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    if (org.members.includes(user._id))
+      return res.status(400).json({ msg: "User is already a member" });
+
+    org.members.push(user._id);
+    await org.save();
+
+    await sendEmail({
+      to: email,
+      subject: "You’ve been added to an organization",
+      text: `You've been added to the organization "${org.name}".`,
+    });
+
+    res.json({ msg: "Member invited and added", organization: org });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getMembers = async (req, res, next) => {
+  try {
+    const { orgId } = req.params;
+
+    const org = await Organization.findById(orgId)
+      .populate("members", "name email role");
+
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    res.json({ members: org.members });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const removeMember = async (req, res, next) => {
+  try {
+    const { orgId, userId } = req.params;
+
+    const org = await Organization.findById(orgId);
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    if (!org.owner.equals(req.user.id))
+      return res.status(403).json({ msg: "Only the owner can remove members" });
+
+    org.members = org.members.filter((id) => id.toString() !== userId);
+    await org.save();
+
+    res.json({ msg: "Member removed", organization: org });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const updateOrganization = async (req, res, next) => {
+  try {
+    const { orgId } = req.params;
+    const { name, description } = req.body;
+
+    const org = await Organization.findById(orgId);
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    if (!org.owner.equals(req.user.id))
+      return res.status(403).json({ msg: "Only the owner can update organization" });
+
+    org.name = name || org.name;
+    org.description = description || org.description;
+    await org.save();
+
+    res.json({ msg: "Organization updated", organization: org });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const leaveOrganization = async (req, res, next) => {
+  try {
+    const { orgId } = req.params;
+
+    const org = await Organization.findById(orgId);
+    if (!org) return res.status(404).json({ msg: "Organization not found" });
+
+    // Owner can't leave
+    if (org.owner.equals(req.user.id)) {
+      return res.status(400).json({ msg: "Owner cannot leave organization" });
+    }
+
+    org.members = org.members.filter((id) => id.toString() !== req.user.id);
+    await org.save();
+
+    res.json({ msg: "You have left the organization" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createOrganization,
+  inviteMember,
+  getMembers,
+  removeMember,
+  updateOrganization,
+  leaveOrganization,
+};
+ 
+// Delete a notification
+ 
+// Mark all notifications for user as read
+ 
+// Mark one notification as read
+ 
+// Fetch latest 100 notifications for logged-in user
+ 
+// Create and emit notification
+ 
+const Notification = require("../models/Notification");
+
+
+const createNotification = async (req, res, next) => {
+  try {
+    const { recipientId, type, message, link } = req.body;
+
+    const notification = await Notification.create({
+      recipient: recipientId,
+      type,
+      message,
+      link,
+    });
+
+
+    const { getSocketIO } = require("../utils/socket");
+    const io = getSocketIO();
+    io.to(recipientId).emit("notification", notification);
+
+    res.status(201).json({ msg: "Notification created", notification });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getNotifications = async (req, res, next) => {
+  try {
+    const notifications = await Notification.find({ recipient: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json({ notifications });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markAsRead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, recipient: req.user.id },
+      { read: true },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({ msg: "Notification not found" });
+    }
+
+    res.json({ msg: "Marked as read", notification });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const markAllAsRead = async (req, res, next) => {
+  try {
+    await Notification.updateMany({ recipient: req.user.id }, { read: true });
+    res.json({ msg: "All notifications marked as read" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const deleteNotification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await Notification.findOneAndDelete({
+      _id: id,
+      recipient: req.user.id,
+    });
+
+    if (!result) {
+      return res.status(404).json({ msg: "Notification not found" });
+    }
+
+    res.json({ msg: "Notification deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createNotification,
+  getNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+};
+ 
+const Job = require("../models/Job");
+
+const addMilestone = async (req, res, next) => {
+  try {
+    const { jobId } = req.params;
+    const { title, dueDate, amount } = req.body;
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    const newMilestone = { title, dueDate, amount };
+    job.milestones.push(newMilestone);
+    await job.save();
+
+    res.status(201).json({ msg: "Milestone added", milestones: job.milestones });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateMilestone = async (req, res, next) => {
+  try {
+    const { jobId, milestoneId } = req.params;
+    const { title, dueDate, amount } = req.body;
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    const milestone = job.milestones.id(milestoneId);
+    if (!milestone) return res.status(404).json({ msg: "Milestone not found" });
+
+    if (title) milestone.title = title;
+    if (dueDate) milestone.dueDate = dueDate;
+    if (amount) milestone.amount = amount;
+
+    await job.save();
+    res.json({ msg: "Milestone updated", milestone });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteMilestone = async (req, res, next) => {
+  try {
+    const { jobId, milestoneId } = req.params;
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    const milestone = job.milestones.id(milestoneId);
+    if (!milestone) return res.status(404).json({ msg: "Milestone not found" });
+
+    milestone.remove();
+    await job.save();
+
+    res.json({ msg: "Milestone deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getJobMilestones = async (req, res, next) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    res.json({ milestones: job.milestones });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  addMilestone,
+  updateMilestone,
+  deleteMilestone,
+  getJobMilestones,
+};
+ 
+// 🔄 Update Job Status (open, closed, in-review, etc.)
+ 
+ 🗑️ Delete Job
+ 
+// 🛠️ Update Job
+ 
+// 🔍 Get Job by ID
+ 
+    // 🎯 Skill-Based Matching
+ 
+// 📦 Get All Jobs with Pagination, Sorting, Skill-Match
+ 
+// 🔨 Create Job
+ 
+const Job = require("../models/Job");
+const User = require("../models/User");
+
+
+const createJob = async (req, res, next) => {
+  try {
+    const { title, description, budget, skills, deadline, milestones = [] } = req.body;
+
+    const job = await Job.create({
+      title,
+      description,
+      budget,
+      skills, 
+      deadline,
+      milestones, 
+      client: req.user.id,
+    });
+
+    res.status(201).json({ msg: "Job created", job });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getJobs = async (req, res, next) => {
+  try {
+    const {
+      status,
+      keyword,
+      skill,
+      matchSkills,
+      sort = "createdAt", 
+      order = "desc",     
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const filter = {};
+
+    if (status) filter.status = status;
+    if (keyword) filter.title = { $regex: keyword, $options: "i" };
+    if (skill) filter.skills = { $in: [skill] };
+
+
+    if (matchSkills === "true" && req.user?.id) {
+      const user = await User.findById(req.user.id);
+      if (user?.skills?.length) {
+        filter.skills = { $in: user.skills };
+      }
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortObj = {};
+    sortObj[sort] = order === "asc" ? 1 : -1;
+
+    const jobs = await Job.find(filter)
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("client", "name email");
+
+    const total = await Job.countDocuments(filter);
+
+    res.json({
+      jobs,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getJobById = async (req, res, next) => {
+  try {
+    const job = await Job.findById(req.params.id)
+      .populate("client", "name email");
+
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    res.json({ job });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const updateJob = async (req, res, next) => {
+  try {
+    const updates = req.body;
+
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.id, client: req.user.id },
+      updates,
+      { new: true }
+    );
+
+    if (!job) return res.status(404).json({ msg: "Job not found or unauthorized" });
+
+    res.json({ msg: "Job updated", job });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const deleteJob = async (req, res, next) => {
+  try {
+    const job = await Job.findOneAndDelete({ _id: req.params.id, client: req.user.id });
+
+    if (!job) return res.status(404).json({ msg: "Job not found or unauthorized" });
+
+    res.json({ msg: "Job deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const updateJobStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.id, client: req.user.id },
+      { status },
+      { new: true }
+    );
+
+    if (!job) return res.status(404).json({ msg: "Job not found or unauthorized" });
+
+    res.json({ msg: `Status updated to ${status}`, job });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createJob,
+  getJobs,
+  getJobById,
+  updateJob,
+  deleteJob,
+  updateJobStatus,
+};
+ 
+// ℹ️ Invoice Details
+ 
+   // 📎 Branding (logo)
+ 
+// 📄 Generate PDF with Branding
+ 
+// 🎯 Stripe Payment Intent
+ 
+// ❌ Delete Invoice
+ 
+// 💰 Mark Invoice Paid
+ 
+// 🔍 Get Invoice by ID
+ 
+// 📥 Get User Invoices
+ 
+// 🧾 Create Invoice
+ 
+const Invoice = require("../models/Invoice");
+const Contract = require("../models/Contract");
+const { getSocketIO } = require("../utils/socket");
+const logger = require("../utils/logger");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
+const stripe = require("../config/stripe");
+
+
+const createInvoice = async (req, res, next) => {
+  try {
+    const { contractId, milestoneId, items, dueDate } = req.body;
+
+    if (!contractId || !items || items.length === 0) {
+      return res.status(400).json({ msg: "Contract and items required" });
+    }
+
+
+    const totalAmount = items.reduce((sum, item) => {
+      return sum + item.quantity * item.unitPrice;
+    }, 0);
+
+    const invoice = await Invoice.create({
+      contract: contractId,
+      milestone: milestoneId || undefined,
+      issuedBy: req.user.id,
+      items,
+      total: totalAmount,
+      dueDate,
+    });
+
+    const io = getSocketIO();
+    io.emit("new_invoice", invoice);
+
+    logger.info(`Invoice ${invoice._id} created by ${req.user.id}`);
+    res.status(201).json({ msg: "Invoice created", invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getUserInvoices = async (req, res, next) => {
+  try {
+    const invoices = await Invoice.find({
+      $or: [{ issuedBy: req.user.id }, { paidBy: req.user.id }],
+    })
+      .populate("contract", "status")
+      .sort({ createdAt: -1 });
+
+    res.json({ invoices });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getInvoiceById = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id)
+      .populate("contract", "status")
+      .populate("milestone", "title")
+      .populate("issuedBy", "name email");
+
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    res.json({ invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markInvoicePaid = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    if (invoice.status === "paid") {
+      return res.status(400).json({ msg: "Already paid" });
+    }
+
+    invoice.status = "paid";
+    invoice.paidAt = new Date();
+    invoice.paidBy = req.user.id;
+
+    await invoice.save();
+
+    const io = getSocketIO();
+    io.emit("invoice_paid", invoice);
+
+    res.json({ msg: "Invoice marked as paid", invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const deleteInvoice = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    if (invoice.status === "paid") {
+      return res.status(403).json({ msg: "Cannot delete a paid invoice" });
+    }
+
+    await invoice.deleteOne();
+    res.json({ msg: "Invoice deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createStripePaymentIntent = async (req, res, next) => {
+  try {
+    const { invoiceId } = req.params;
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    if (invoice.status === "paid") {
+      return res.status(400).json({ msg: "Invoice already paid" });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(invoice.total * 100), 
+      currency: "usd",
+      metadata: {
+        invoiceId: invoice._id.toString(),
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      invoiceId: invoice._id,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const generateInvoicePDF = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const invoice = await Invoice.findById(id)
+      .populate("contract")
+      .populate("issuedBy", "name email");
+
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    const doc = new PDFDocument();
+    const filename = `invoice-${invoice._id}.pdf`;
+    const filepath = path.join(__dirname, `../invoices/${filename}`);
+
+    doc.pipe(fs.createWriteStream(filepath));
+
+    //Header with logo
+    const logoPath = path.join(__dirname, "../assets/logo.png");
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 50, 40, { width: 120 });
+    }
+
+    doc.fontSize(20).text("INVOICE", 400, 50, { align: "right" });
+    doc.moveDown().moveDown();
+
+    //  Invoice details
+    doc.fontSize(12).text(`Invoice ID: ${invoice._id}`);
+    doc.text(`Issued By: ${invoice.issuedBy.name} (${invoice.issuedBy.email})`);
+    doc.text(`Total: $${invoice.total.toFixed(2)}`);
+    doc.text(`Status: ${invoice.status}`);
+    doc.moveDown();
+
+
+    doc.text("Invoice Items:");
+    invoice.items.forEach((item, i) => {
+      doc.text(
+        `${i + 1}. ${item.description} — Qty: ${item.quantity} × $${item.unitPrice}`
+      );
+    });
+
+    doc.end();
+
+    doc.on("finish", () => {
+      res.download(filepath, filename, (err) => {
+        if (!err) fs.unlink(filepath, () => {});
+      });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+
+module.exports = {
+  createInvoice,
+  getUserInvoices,
+  getInvoiceById,
+  markInvoicePaid,
+  deleteInvoice,
+  createStripePaymentIntent,
+  generateInvoicePDF,
+};
+ 
+const Invoice = require("../models/Invoice");
+const Contract = require("../models/Contract");
+const { getSocketIO } = require("../utils/socket");
+const logger = require("../utils/logger");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
+const stripe = require("../config/stripe");
+
+
+const createInvoice = async (req, res, next) => {
+  try {
+    const { contractId, milestoneId, items, dueDate } = req.body;
+
+    if (!contractId || !items || items.length === 0) {
+      return res.status(400).json({ msg: "Contract and items required" });
+    }
+
+
+    const totalAmount = items.reduce((sum, item) => {
+      return sum + item.quantity * item.unitPrice;
+    }, 0);
+
+    const invoice = await Invoice.create({
+      contract: contractId,
+      milestone: milestoneId || undefined,
+      issuedBy: req.user.id,
+      items,
+      total: totalAmount,
+      dueDate,
+    });
+
+    const io = getSocketIO();
+    io.emit("new_invoice", invoice);
+
+    logger.info(`Invoice ${invoice._id} created by ${req.user.id}`);
+    res.status(201).json({ msg: "Invoice created", invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getUserInvoices = async (req, res, next) => {
+  try {
+    const invoices = await Invoice.find({
+      $or: [{ issuedBy: req.user.id }, { paidBy: req.user.id }],
+    })
+      .populate("contract", "status")
+      .sort({ createdAt: -1 });
+
+    res.json({ invoices });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const getInvoiceById = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id)
+      .populate("contract", "status")
+      .populate("milestone", "title")
+      .populate("issuedBy", "name email");
+
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    res.json({ invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markInvoicePaid = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    if (invoice.status === "paid") {
+      return res.status(400).json({ msg: "Already paid" });
+    }
+
+    invoice.status = "paid";
+    invoice.paidAt = new Date();
+    invoice.paidBy = req.user.id;
+
+    await invoice.save();
+
+    const io = getSocketIO();
+    io.emit("invoice_paid", invoice);
+
+    res.json({ msg: "Invoice marked as paid", invoice });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const deleteInvoice = async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    if (invoice.status === "paid") {
+      return res.status(403).json({ msg: "Cannot delete a paid invoice" });
+    }
+
+    await invoice.deleteOne();
+    res.json({ msg: "Invoice deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createStripePaymentIntent = async (req, res, next) => {
+  try {
+    const { invoiceId } = req.params;
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    if (invoice.status === "paid") {
+      return res.status(400).json({ msg: "Invoice already paid" });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(invoice.total * 100), 
+      currency: "usd",
+      metadata: {
+        invoiceId: invoice._id.toString(),
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      invoiceId: invoice._id,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+const generateInvoicePDF = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const invoice = await Invoice.findById(id)
+      .populate("contract")
+      .populate("issuedBy", "name email");
+
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    const doc = new PDFDocument();
+    const filename = `invoice-${invoice._id}.pdf`;
+    const filepath = path.join(__dirname, `../invoices/${filename}`);
+
+    doc.pipe(fs.createWriteStream(filepath));
+
+    //Header with logo
+    const logoPath = path.join(__dirname, "../assets/logo.png");
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 50, 40, { width: 120 });
+    }
+
+    doc.fontSize(20).text("INVOICE", 400, 50, { align: "right" });
+    doc.moveDown().moveDown();
+
+    //  Invoice details
+    doc.fontSize(12).text(`Invoice ID: ${invoice._id}`);
+    doc.text(`Issued By: ${invoice.issuedBy.name} (${invoice.issuedBy.email})`);
+    doc.text(`Total: $${invoice.total.toFixed(2)}`);
+    doc.text(`Status: ${invoice.status}`);
+    doc.moveDown();
+
+
+    doc.text("Invoice Items:");
+    invoice.items.forEach((item, i) => {
+      doc.text(
+        `${i + 1}. ${item.description} — Qty: ${item.quantity} × $${item.unitPrice}`
+      );
+    });
+
+    doc.end();
+
+    doc.on("finish", () => {
+      res.download(filepath, filename, (err) => {
+        if (!err) fs.unlink(filepath, () => {});
+      });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+
+module.exports = {
+  createInvoice,
+  getUserInvoices,
+  getInvoiceById,
+  markInvoicePaid,
+  deleteInvoice,
+  createStripePaymentIntent,
+  generateInvoicePDF,
+};
+ 
+// 📄 Get single dispute (for detail view)
+ 
+/ 🧑‍⚖️ Admin - Update dispute status
+ 
+// 🧑‍⚖️ Admin - Get all disputes
+ 
+// 👤 Get current user's disputes
+ 
+// 📨 Create dispute
+ 
+const Dispute = require("../models/Dispute");
+const Contract = require("../models/Contract");
+const logger = require("../utils/logger");
+
+// Create dispute
+const createDispute = async (req, res, next) => {
+  try {
+    const { contractId, reason, description, milestoneId } = req.body;
+
+    const contract = await Contract.findById(contractId);
+    if (!contract) {
+      return res.status(404).json({ msg: "Contract not found" });
+    }
+
+    const dispute = await Dispute.create({
+      contract: contractId,
+      raisedBy: req.user.id,
+      milestone: milestoneId || undefined,
+      reason,
+      description,
+    });
+
+    logger.info(`📨 Dispute raised by ${req.user.id} for contract ${contractId}`);
+    res.status(201).json({ msg: "Dispute created", dispute });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Get user's disputes (freelancer or client)
+const getUserDisputes = async (req, res, next) => {
+  try {
+    const disputes = await Dispute.find({
+      raisedBy: req.user.id,
+    })
+      .populate("contract", "status")
+      .populate("milestone", "title")
+      .sort({ createdAt: -1 });
+
+    res.json({ disputes });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Admin: Get all disputes
+const getAllDisputes = async (req, res, next) => {
+  try {
+    const disputes = await Dispute.find()
+      .populate("raisedBy", "name email")
+      .populate("contract", "status")
+      .sort({ createdAt: -1 });
+
+    res.json({ disputes });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Update dispute status (admin only)
+const updateDisputeStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, resolution } = req.body;
+
+    const dispute = await Dispute.findById(id);
+    if (!dispute) return res.status(404).json({ msg: "Dispute not found" });
+
+    dispute.status = status || dispute.status;
+    dispute.resolution = resolution || dispute.resolution;
+
+    await dispute.save();
+
+    logger.info(`📌 Dispute ${id} updated to status ${dispute.status}`);
+    res.json({ msg: "Dispute updated", dispute });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Get single dispute (for detail page)
+const getSingleDispute = async (req, res, next) => {
+  try {
+    const dispute = await Dispute.findById(req.params.id)
+      .populate("raisedBy", "name email")
+      .populate("milestone", "title")
+      .populate("contract");
+
+    if (!dispute) return res.status(404).json({ msg: "Dispute not found" });
+
+    res.json({ dispute });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createDispute,
+  getUserDisputes,
+  getAllDisputes,
+  updateDisputeStatus,
+  getSingleDispute,
+};
+ 
+const Contract = require("../models/Contract");
+const Job = require("../models/Job");
+const Milestone = require("../models/Milestone");
+
+// Create New Contract (Client)
+const createContract = async (req, res, next) => {
+  try {
+    const { jobId, freelancerId, terms, startDate, endDate } = req.body;
+
+    if (!jobId || !freelancerId || !terms || !startDate || !endDate) {
+      return res.status(400).json({ msg: "All fields are required" });
+    }
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    const existing = await Contract.findOne({
+      job: jobId,
+      freelancer: freelancerId,
+    });
+    if (existing) return res.status(409).json({ msg: "Contract already exists" });
+
+    const contract = await Contract.create({
+      job: jobId,
+      client: req.user.id,
+      freelancer: freelancerId,
+      terms,
+      startDate,
+      endDate,
+    });
+
+    res.status(201).json({ msg: "Contract created", contract });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Freelancer Approval
+const approveContract = async (req, res, next) => {
+  try {
+    const contract = await Contract.findById(req.params.id);
+    if (!contract) return res.status(404).json({ msg: "Contract not found" });
+
+    if (contract.freelancer.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "You are not authorized to approve this contract" });
+    }
+
+    if (contract.status !== "active") {
+      return res.status(400).json({ msg: "Contract already approved or not in active state" });
+    }
+
+    contract.status = "active";
+    await contract.save();
+
+    res.json({ msg: "Contract approved", contract });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Update Status (Client/Freelancer)
+const updateContractStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const allowed = ["paused", "completed", "cancelled"];
+
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ msg: "Invalid status" });
+    }
+
+    const contract = await Contract.findById(req.params.id);
+    if (!contract) return res.status(404).json({ msg: "Contract not found" });
+
+    if (
+      contract.client.toString() !== req.user.id &&
+      contract.freelancer.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ msg: "Unauthorized to change status" });
+    }
+
+    contract.status = status;
+    await contract.save();
+
+    res.json({ msg: "Contract status updated", contract });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Create Milestone (Client only)
+const createMilestoneForContract = async (req, res, next) => {
+  try {
+    const { title, description, dueDate, amount } = req.body;
+    const contract = await Contract.findById(req.params.contractId);
+
+    if (!contract) return res.status(404).json({ msg: "Contract not found" });
+    if (contract.client.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Only client can create milestones" });
+    }
+
+    const milestone = await Milestone.create({
+      contract: contract._id,
+      title,
+      description,
+      dueDate,
+      amount,
+    });
+
+    res.status(201).json({ msg: "Milestone created", milestone });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Fetch All Contracts for a User
+const getContractsForUser = async (req, res, next) => {
+  try {
+    const contracts = await Contract.find({
+      $or: [{ client: req.user.id }, { freelancer: req.user.id }],
+    })
+      .populate("job", "title")
+      .populate("freelancer", "name email")
+      .populate("client", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json({ contracts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Get Single Contract
+const getSingleContract = async (req, res, next) => {
+  try {
+    const contract = await Contract.findById(req.params.id)
+      .populate("job")
+      .populate("client", "name email")
+      .populate("freelancer", "name email");
+
+    if (!contract) return res.status(404).json({ msg: "Contract not found" });
+
+    if (
+      contract.client.toString() !== req.user.id &&
+      contract.freelancer.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+
+    res.json({ contract });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete Contract (Admin or Client)
+const deleteContract = async (req, res, next) => {
+  try {
+    const contract = await Contract.findById(req.params.id);
+    if (!contract) return res.status(404).json({ msg: "Contract not found" });
+
+    if (
+      contract.client.toString() !== req.user.id &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({ msg: "Unauthorized" });
+    }
+
+    await contract.deleteOne();
+    res.json({ msg: "Contract deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createContract,
+  approveContract,
+  updateContractStatus,
+  createMilestoneForContract,
+  getContractsForUser,
+  getSingleContract,
+  deleteContract,
+};
+ 
+👁]
+ 
+[📜]
+ 
+const Message = require("../models/Message");
+const Group = require("../models/Group");
+const { getSocketIO } = require("../utils/socket");
+
+const sendMessage = async (req, res, next) => {
+  try {
+    const { content, recipientId, groupId } = req.body;
+    const attachment = req.file?.filename;
+
+    const message = await Message.create({
+      sender: req.user.id,
+      content,
+      attachment,
+      recipient: groupId ? undefined : recipientId,
+      group: groupId || undefined,
+    });
+
+    const io = getSocketIO();
+    const room = groupId || recipientId;
+    io.to(room).emit("new_message", message);
+
+    res.status(201).json({ message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getChatHistory = async (req, res, next) => {
+  try {
+    const { recipientId, groupId } = req.query;
+
+    const filter = groupId
+      ? { group: groupId }
+      : {
+          $or: [
+            { sender: req.user.id, recipient: recipientId },
+            { sender: recipientId, recipient: req.user.id },
+          ],
+        };
+
+    const messages = await Message.find(filter)
+      .populate("sender", "name email")
+      .sort({ createdAt: 1 });
+
+    res.json({ messages });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markSeen = async (req, res, next) => {
+  try {
+    const { messageIds } = req.body;
+    const userId = req.user.id;
+
+    await Promise.all(
+      messageIds.map((id) =>
+        Message.updateOne(
+          { _id: id, "seenBy.user": { $ne: userId } },
+          {
+            $push: { seenBy: { user: userId, seenAt: new Date() } },
+          }
+        )
+      )
+    );
+
+    const io = getSocketIO();
+    messageIds.forEach((id) => {
+      io.emit("message_seen", { messageId: id, userId });
+    });
+
+    res.json({ msg: "Seen status updated" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createGroup = async (req, res, next) => {
+  try {
+    const { name, memberIds } = req.body;
+    const group = await Group.create({
+      name,
+      members: [req.user.id, ...memberIds],
+    });
+
+    res.status(201).json({ group });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const notifyTyping = async (req, res, next) => {
+  try {
+    const { to } = req.body;
+    const from = req.user.id;
+    const io = getSocketIO();
+
+    io.to(to).emit("typing", { from });
+    res.json({ msg: "Typing event emitted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getUserGroups = async (req, res, next) => {
+  try {
+    const groups = await Group.find({ members: req.user.id }).populate("members", "name email");
+    res.json({ groups });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteMessage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const message = await Message.findById(id);
+
+    if (!message) return res.status(404).json({ msg: "Message not found" });
+    if (message.sender.toString() !== req.user.id)
+      return res.status(403).json({ msg: "You can only delete your own messages" });
+
+    await message.deleteOne();
+
+    const io = getSocketIO();
+    io.to(message.group || message.recipient.toString()).emit("message_deleted", { id });
+
+    res.json({ msg: "Message deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  sendMessage,
+  getChatHistory,
+  markSeen,
+  createGroup,
+  notifyTyping,
+getUserGroups,
+deleteMessage,
+};
+ 
+const Availability = require("../models/Availability");
+const { isOverlapping, generateRecurringDays } = require("../utils/availabilityUtils");
+const moment = require("moment");
+
+const setAvailability = async (req, res, next) => {
+  try {
+    const { day, timeSlots, recurring } = req.body;
+
+    if (isOverlapping([...timeSlots])) {
+      return res.status(400).json({ msg: "Time slots overlap!" });
+    }
+
+    // For recurring availability
+    if (recurring?.enabled && recurring.daysOfWeek && recurring.repeatUntil) {
+      const recurringDays = generateRecurringDays(day, recurring.repeatUntil, recurring.daysOfWeek);
+
+      const bulk = recurringDays.map((recDay) => ({
+        updateOne: {
+          filter: { user: req.user.id, day: recDay },
+          update: { user: req.user.id, day: recDay, timeSlots, recurring },
+          upsert: true,
+        },
+      }));
+
+      await Availability.bulkWrite(bulk);
+      return res.status(201).json({ message: "Recurring availability set" });
+    }
+
+    // Non-recurring
+    const existing = await Availability.findOne({ user: req.user.id, day });
+
+    if (existing) {
+      existing.timeSlots = timeSlots;
+      await existing.save();
+      return res.json({ message: "Availability updated", availability: existing });
+    }
+
+    const availability = await Availability.create({
+      user: req.user.id,
+      day,
+      timeSlots,
+      recurring,
+    });
+
+    res.status(201).json({ message: "Availability set", availability });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAvailability = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const availability = await Availability.find({ user: userId || req.user.id });
+
+    res.json({ availability });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteAvailability = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Availability.findOneAndDelete({ _id: id, user: req.user.id });
+
+    if (!deleted) return res.status(404).json({ message: "Not found" });
+
+    res.json({ message: "Availability deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const exportICal = async (req, res, next) => {
+  try {
+    //  TODO: Convert availability to .ics calendar file
+    res.status(200).send("Coming soon: iCal/Google Calendar export");
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  setAvailability,
+  getAvailability,
+  deleteAvailability,
+  exportICal,
+};
+ 
+const Availability = require("../models/Availability");
+const { isOverlapping, generateRecurringDays } = require("../utils/availabilityUtils");
+const moment = require("moment");
+
+const setAvailability = async (req, res, next) => {
+  try {
+    const { day, timeSlots, recurring } = req.body;
+
+    if (isOverlapping([...timeSlots])) {
+      return res.status(400).json({ msg: "Time slots overlap!" });
+    }
+
+    // For recurring availability
+    if (recurring?.enabled && recurring.daysOfWeek && recurring.repeatUntil) {
+      const recurringDays = generateRecurringDays(day, recurring.repeatUntil, recurring.daysOfWeek);
+
+      const bulk = recurringDays.map((recDay) => ({
+        updateOne: {
+          filter: { user: req.user.id, day: recDay },
+          update: { user: req.user.id, day: recDay, timeSlots, recurring },
+          upsert: true,
+        },
+      }));
+
+      await Availability.bulkWrite(bulk);
+      return res.status(201).json({ message: "Recurring availability set" });
+    }
+
+    // Non-recurring
+    const existing = await Availability.findOne({ user: req.user.id, day });
+
+    if (existing) {
+      existing.timeSlots = timeSlots;
+      await existing.save();
+      return res.json({ message: "Availability updated", availability: existing });
+    }
+
+    const availability = await Availability.create({
+      user: req.user.id,
+      day,
+      timeSlots,
+      recurring,
+    });
+
+    res.status(201).json({ message: "Availability set", availability });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAvailability = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const availability = await Availability.find({ user: userId || req.user.id });
+
+    res.json({ availability });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteAvailability = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Availability.findOneAndDelete({ _id: id, user: req.user.id });
+
+    if (!deleted) return res.status(404).json({ message: "Not found" });
+
+    res.json({ message: "Availability deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const exportICal = async (req, res, next) => {
+  try {
+    //  TODO: Convert availability to .ics calendar file
+    res.status(200).send("Coming soon: iCal/Google Calendar export");
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  setAvailability,
+  getAvailability,
+  deleteAvailability,
+  exportICal,
+};
+ 
+// Reset Password
+ 
+// Forgot Password
+ 
+// Resend Verification Email
+ 
+// Login
+ 
+// Verify Email
+ 
+// Register
+ 
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const User = require("../models/User");
+const sendEmail = require("../utils/mailer");
+const { generateToken, generateVerifyToken } = require("../utils/token");
+
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:4000";
+
+// Register
+const register = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      isVerified: false,
+    });
+
+    const verifyToken = generateVerifyToken(user._id);
+    const verifyLink = `${CLIENT_URL}/verify-email/${verifyToken}`;
+
+    const html = `
+      <h2>Welcome, ${user.name}</h2>
+      <p>Please verify your email:</p>
+      <a href="${verifyLink}">Verify Email</a>
+      <br/><small>${verifyLink}</small>
+    `;
+
+    await sendEmail({ to: email, subject: "Verify Your Email", html });
+
+    res.status(201).json({
+      message: "User registered. Verification email sent.",
+      user: { _id: user._id, name: user.name, email: user.email },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Verify Email
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isVerified) return res.status(400).json({ message: "Already verified" });
+
+    user.isVerified = true;
+    await user.save();
+
+    res.json({ message: "Email verified successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Login
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Please verify your email first." });
+    }
+
+    const token = generateToken(user._id);
+    res.json({
+      message: "Login successful",
+      token,
+      user: { _id: user._id, name: user.name, email: user.email },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Resend Verification Email
+const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isVerified) return res.status(400).json({ message: "Already verified" });
+
+    const token = generateVerifyToken(user._id);
+    const link = `${CLIENT_URL}/verify-email/${token}`;
+
+    const html = `
+      <p>Hi ${user.name},</p>
+      <p>Please verify your email:</p>
+      <a href="${link}">Verify Now</a>
+      <br/><small>${link}</small>
+    `;
+
+    await sendEmail({
+      to: email,
+      subject: "Resend Verification Email",
+      html,
+    });
+
+    res.json({ message: "Verification email resent" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Forgot Password
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+    await user.save();
+
+    const resetLink = `${CLIENT_URL}/reset-password/${resetToken}`;
+    const html = `
+      <h2>Reset Password</h2>
+      <p>Click below to reset your password:</p>
+      <a href="${resetLink}">Reset Password</a>
+      <br/><small>${resetLink}</small>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: "Reset Your Password",
+      html,
+    });
+
+    res.json({ message: "Password reset email sent" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//  Reset Password
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ message: "Invalid or expired token" });
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  verifyEmail,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
+};
+ 
+const User = require("../models/User");
+const Job = require("../models/Job");
+const Contract = require("../models/Contract");
+const Transaction = require("../models/Transaction");
+
+const getDashboardStats = async (req, res, next) => {
+  try {
+    const [
+      totalUsers,
+      totalClients,
+      totalFreelancers,
+      totalJobs,
+      totalContracts,
+      totalRevenueAgg,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: "client" }),
+      User.countDocuments({ role: "freelancer" }),
+      Job.countDocuments(),
+      Contract.countDocuments(),
+      Transaction.aggregate([
+        { $group: { _id: null, totalRevenue: { $sum: "$amount" } } },
+      ]),
+    ]);
+
+    const totalRevenue = totalRevenueAgg[0]?.totalRevenue || 0;
+
+    res.status(200).json({
+      stats: {
+        users: {
+          total: totalUsers,
+          clients: totalClients,
+          freelancers: totalFreelancers,
+        },
+        jobs: totalJobs,
+        contracts: totalContracts,
+        revenue: totalRevenue,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+ 
+
+// ⏱ Webhook must use raw body parser BEFORE express.json()
+ 
+// ───────────────────────────────────────────────────────────────
+// 🌐 Global Middlewares
+// ───────────────────────────────────────────────────────────────
+ 
+// 🧠 Express-session (used for OAuth)
+ 
+// 🔐 Passport Strategies
+ 
+// ───────────────────────────────────────────────────────────────
+// 📦 API ROUTES
+// ───────────────────────────────────────────────────────────────
+ 
+// ───────────────────────────────────────────────────────────────
+// 🚨 Global Error Handler (MUST be last)
+ 
+const express = require("express");
+const cors = require("cors");
+const session = require("express-session");
+const passport = require("passport");
+require("dotenv").config();
+require("./config/passport");
+
+const errorHandler = require("./middlewares/errorHandler");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const jobRoutes = require("./routes/jobRoutes");
+const proposalRoutes = require("./routes/proposalRoutes");
+const contractRoutes = require("./routes/contractRoutes");
+const invoiceRoutes = require("./routes/invoiceRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const chatRoutes = require("./routes/chatRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const disputeRoutes = require("./routes/disputeRoutes");
+const orgRoutes = require("./routes/orgRoutes");
+const availabilityRoutes = require("./routes/availabilityRoutes");
+const webhookRoutes = require("./routes/webhookRoutes");
+
+const app = express();
+
+//  MIDDLEWARE 
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static("uploads"));
+
+//  SESSION + PASSPORT
+app.use(
+  session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// ROUTES 
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/proposals", proposalRoutes);
+app.use("/api/contracts", contractRoutes);
+app.use("/api/invoices", invoiceRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/chats", chatRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/disputes", disputeRoutes);
+app.use("/api/orgs", orgRoutes);
+app.use("/api/availability", availabilityRoutes);
+app.use("/api/webhooks", webhookRoutes); // Stripe webhook placeholder
+
+//  ERROR HANDLER 
+app.use(errorHandler);
+
+module.exports = app;
+ 
+// routes/webhookRoutes.js
+ 
+// Important: Stripe requires raw body parsing
+ 
+const express = require("express");
+const router = express.Router();
+const { stripeWebhookHandler } = require("../controllers/webhookController");
+
+// Stripe requires raw body!
+router.post("/stripe", express.raw({ type: "application/json" }), stripeWebhookHandler);
+
+module.exports = router;
+ 
+You can 
+ 
+  // ✅ Event logic
+ 
+// optional but recommended
+ 
+/ example model
+ 
+const stripe = require("../config/stripe");
+
+const stripeWebhookHandler = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody, //  rawBody is required
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error(" Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle Stripe Events
+  switch (event.type) {
+    case "payment_intent.succeeded":
+      const paymentIntent = event.data.object;
+      console.log(" Payment Intent was successful:", paymentIntent.id);
+
+      // TODO: update contract/payment status
+      break;
+
+    case "invoice.payment_failed":
+      const failedInvoice = event.data.object;
+      console.log(" Invoice payment failed:", failedInvoice.id);
+      break;
+
+    case "customer.subscription.deleted":
+      console.log(" Subscription cancelled:", event.data.object.id);
+      break;
+
+    default:
+      console.log(` Unhandled event type: ${event.type}`);
+  }
+
+  res.status(200).json({ received: true });
+};
+
+module.exports = {
+  stripeWebhookHandler,
+};
+ 
+
+const formatCurrency = (amount, currency = "USD") => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const formatDateTime = (date) => {
+  return new Date(date).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+module.exports = {
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+};
+ 
+// 📈 REPORT ROUTES
+ 
+// 📄 PROPOSAL ROUTES
+ 
+// 💳 PAYMENT ROUTES
+ 
+// 🏢 ORGANIZATION ROUTES
+ 
+// 🔔 NOTIFICATION ROUTES
+ 
+// 🔨 MILESTONE ROUTES
+ 
+// 🛠 JOB ROUTES
+ 
+// 📄 INVOICE ROUTES
+ 
+/ 📄 DISPUTE ROUTES
+ 
+// 📄 CONTRACT ROUTES
+ 
+/ optional: e.g. client-only or freelancer-only
+ 
+// Delete message
+ 
+// Get user’s groups
+ 
+// Create group
+ 
+// Typing indicator
+ 
+// Mark messages as seen
+ 
+/ Get conversation history
+ 
+/ Send message with optional file
+ 
+// 🗑 Delete
+ 
+// 👥 Group Routes
+ 
+// 💬 Messaging Routes
+ 
+ // Export as iCal format
+ 
+Delete user availability
+ 
+// Get user availability
+ 
+/ Set or update availability
+ 
+// 🗓 Routes
+ 
+// Optional utility wrapper
+ 
+// 👕 Upload profile image or CV
+ 
+// 🌍 GET /api/users/freelancers?skill=React&location=Lagos
+ 
+// ❌ DELETE /api/users/profile
+ 
+     // delete old image
+ 
+// 📝 PUT /api/users/profile
+ 
+// 🔍 GET /api/users/profile
+ 
+// 🛠 Optional: delete review
+ 
+// 📄 Get all reviews for a user (freelancer or client)
+ 
+    // Ensure only one review per user per contract
+ 
+    // Check contract validity
+ 
+// ✅ Create a review (1 per contract per user)
+ 
+  // 🔔 Notify freelancer
+ 
+    // 🔔 Notify client
+ 
+const  mongoose = require("mongoose");
+
+const ProposalSchema = new mongoose.Schema({
+     job: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Job",
+  },
+  freelancer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  coverLetter: String,
+  budget: Number,
+  status: {
+    type: String,
+    enum: ["pending", "accepted", "rejected"],
+    default: "pending",
+  },
+}, { timestamps: true });
+
+module.exports =  mongoose.model("Proposal", ProposalSchema);
+ 
+/ Stripe uses cents
+ 
+  // Optional: mark invoice as paid
+ 
+/ used inside stripeWebhookController.js
+ 
+// 6️⃣ Leave org
+ 
+// 5️⃣ Update org info
+ 
+// 4️⃣ Remove member
+ 
+// 3️⃣ Get organization members
+ 
+// 2️⃣ Invite a member (via email)
+ 
+// 1️⃣ Create an organization
+ 
+// ❌ Delete a notification
+ 
+// ✅ Mark all as read
+ 
+
+// ✅ Mark single notification as read
+ 
+// 📩 Get notifications for logged-in user
+ 
+    // Emit via socket if connected
+ 
+// 📥 Create new notification
+ 
+// 🔄 Update Job Status
+ 
+// ❌ Delete Job
+ 
+// ✏️ Update Job
+ 
+// 📄 Get Single Job by ID
+ 
+    // 🧠 Skill-Based Filtering
+ 
+// c''asc' or 'des
+ 
+/ sort by 'budget', 'deadline', etc
+ 
+// 🔍 Get Jobs with pagination, sort, filters and optional skill-match
+ 
+// 📅 Scheduling integration
+ 
+/ 💡 Array of skills required
+ 
+/ 🔨 Create Job with milestones
+ 
+/ 🧠 For skill matching
+ 
+/ 📅 Support for scheduling
+ 
+/ 📅 Milestone planning
+ 
+const mongoose = require("mongoose");
+
+const JobSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  category: String,
+  skills: [String],
+  budget: Number,
+  client: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  isOpen: {
+    type: Boolean,
+    default: true,
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model("Job", JobSchema);
+
+ 
+    // 🎯 Handle event
+ 
+ stripeWebhook.js 
+ 
+    // 📋 Items
+ 
+const generateInvoicePDF = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const invoice = await Invoice.findById(id)
+      .populate("contract")
+      .populate("issuedBy", "name email");
+
+    if (!invoice) return res.status(404).json({ msg: "Invoice not found" });
+
+    const doc = new PDFDocument();
+    const filename = `invoice-${invoice._id}.pdf`;
+    const filepath = path.join(__dirname, `../invoices/${filename}`);
+
+    // Pipe PDF to file and stream to browser
+    doc.pipe(fs.createWriteStream(filepath));
+    doc.fontSize(20).text("Freelance Invoice", { align: "center" });
+    doc.moveDown();
+
+    doc.fontSize(12).text(`Invoice ID: ${invoice._id}`);
+    doc.text(`Issued By: ${invoice.issuedBy.name} (${invoice.issuedBy.email})`);
+    doc.text(`Contract: ${invoice.contract._id}`);
+    doc.text(`Total: $${invoice.total.toFixed(2)}`);
+    doc.text(`Status: ${invoice.status}`);
+    doc.moveDown();
+
+    doc.text("Items:");
+    invoice.items.forEach((item, idx) => {
+      doc.text(
+        `${idx + 1}. ${item.description} | Qty: ${item.quantity} | Unit: $${item.unitPrice}`
+      );
+    });
+
+    doc.end();
+
+    // Wait for the PDF to be written, then serve it
+    doc.on("finish", () => {
+      res.download(filepath, filename, (err) => {
+        if (err) next(err);
+        else {
+          fs.unlink(filepath, () => {}); 
+        }
+      });
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+ 
+// ✅ Delete invoice (only if unpaid)
+ 
+
+// ✅ Mark invoice as paid (admin or mock for dev)
+ 
+// ✅ Get single invoice
+ 
+// ✅ Get all invoices for user
+ 
+//  Create an invoice
+ 
+    // Calculate total
+ 
+const Invoice = require("../models/Invoice");
+ 
+/ Optional: cleanup
+ 
+// Stripe accepts cents
+ 
+const mongoose = require ("mongoose");
+const InvoiceSchema = new mongoose.Schema({
+  contract: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Contract",
+  },
+  amount: Number,
+  dueDate: Date,
+  isPaid: {
+    type: Boolean,
+    default: false,
+  },
+  issuedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model("Invoice", InvoiceSchema);
+ 
+✅ 5.
+ 
+✅ 4.
+ 
+ ✅ 3.
+ 
+✅ 2.
+ 
+ ✅ 1.
+ 
+const mongoose = require("mongoose");
+
+const DisputeSchema = new mongoose.Schema({
+    contract: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Contract",
+    required: true,
+  },
+  raisedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  reason: {
+    type: String,
+    required: true,
+  },
+  resolutionNote: String,
+  status: {
+    type: String,
+    enum: ["open", "resolved", "rejected"],
+    default: "open",
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model("Dispute", DisputeSchema,)
+ 
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/messages"),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `msg-${Date.now()}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+module.exports = upload;
+ 
+let io;
+
+const initSocket = (server) => {
+  const { Server } = require("socket.io");
+  io = new Server(server, {
+    cors: {
+      origin: "*",
+    },
+  });
+
+  io.on("connection", (socket) => {
+    const userId = socket.handshake.query.userId;
+    if (userId) socket.join(userId);
+
+    socket.on("typing", ({ to }) => {
+      socket.to(to).emit("user_typing", { from: userId });
+    });
+
+    socket.on("disconnect", () => {
+      console.log(`User ${userId} disconnected`);
+    });
+  });
+};
+
+const getSocketIO = () => {
+  if (!io) throw new Error("Socket.IO not initialized");
+  return io;
+};
+
+module.exports = { initSocket, getSocketIO };
+ 
+const Message = require("../models/Message");
+const { getSocketIO } = require("../utils/socket");
+
+const sendMessage = async (req, res, next) => {
+  try {
+    const { recipientId, content } = req.body;
+    const attachment = req.file?.filename;
+
+    const message = await Message.create({
+      sender: req.user.id,
+      recipient: recipientId,
+      content,
+      attachment,
+    });
+
+    // Emit to recipient
+    const io = getSocketIO();
+    io.to(recipientId).emit("new_message", message);
+
+    res.status(201).json({ message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getChatHistory = async (req, res, next) => {
+  try {
+    const { recipientId } = req.params;
+
+    const messages = await Message.find({
+      $or: [
+        { sender: req.user.id, recipient: recipientId },
+        { sender: recipientId, recipient: req.user.id },
+      ],
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.json({ messages });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markAsSeen = async (req, res, next) => {
+  try {
+    const { messageIds } = req.body;
+
+    await Message.updateMany(
+      {
+        _id: { $in: messageIds },
+        recipient: req.user.id,
+        seen: false,
+      },
+      {
+        seen: true,
+        seenAt: new Date(),
+      }
+    );
+
+    const io = getSocketIO();
+    messageIds.forEach((id) => {
+      io.emit("message_seen", { messageId: id, seenAt: new Date() });
+    });
+
+    res.json({ msg: "Seen status updated" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  sendMessage,
+  getChatHistory,
+  markAsSeen,
+};
+ 
+const mongoose = require("mongoose");
+
+const messageSchema = new mongoose.Schema(
+  {
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    recipient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    content: {
+      type: String,
+      trim: true,
+    },
+    attachment: {
+      type: String,
+    },
+    seen: {
+      type: Boolean,
+      default: false,
+    },
+    seenAt: {
+      type: Date,
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Message", messageSchema);
+ 
+const multer = require("multer");
+const path = require("path");
+
+const storageConfig = require("../utils/multerConfig");
+
+const Upload = multer({
+  storage: storageConfig,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExt = [".jpg", ".jpeg", ".png", ".pdf", ".docx"];
+
+    if (!allowedExt.includes(ext)) {
+      return cb(new Error("Only images (JPG/PNG) and documents (PDF/DOCX) allowed"));
+    }
+    cb(null, true);
+  },
+});
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/messages"),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `msg-${Date.now()}${ext}`);
+  },
+});
+
+
+module.exports = Upload;
+ 
+
+let io = null;
+
+const initSocket = (serverInstance) => {
+  const { Server } = require("socket.io");
+  io = new Server(serverInstance, {
+    cors: {
+      origin: "*", // Adjust in production
+      methods: ["GET", "POST"],
+    },
+  });
+
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id);
+
+    socket.on("disconnect", () => {
+      console.log(" Client disconnected:", socket.id);
+    });
+  });
+
+  return io;
+};
+
+const getIO = () => {
+  if (!io) {
+    throw new Error("Socket.io not initialized yet!");
+  }
+  return io;
+};
+
+const emitEvent = (eventName, data) => {
+  if (io) {
+    io.emit(eventName, data);
+  }
+};
+
+module.exports = {
+  initSocket,
+  getIO,
+  emitEvent,
+};
+ 
+const mongoose = require("mongoose");
+
+const MessageSchema = new mongoose.Schema({
+ sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  receiver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  content: String,
+  contract: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Contract",
+  },
+  seen: {
+    type: Boolean,
+    default: false,
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model("Message", MessageSchema);
+
+
+ 
+ // e.g. "09:00"
+ 
+/ e.g. "11:00"
+ 
+// e.g. "2025-07-03"
+ 
+/ e.g. "2025-08-01"
+ 
+// e.g. ["Monday", "Wednesday"]
+ 
+const mongoose = require("mongoose");
+
+const availabilitySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  day: {
+    type: String, 
+    required: true,
+  },
+  timeSlots: [
+    {
+      start: { type: String, required: true }, 
+      end: { type: String, required: true },  
+    },
+  ],
+}, {
+  timestamps: true,
+});
+
+const Availability = mongoose.model("Availability", availabilitySchema);
+module.exports = Availability;
+ 
+/ e.g. "Monday", "2025-07-02"
+ 
+// "09:00"
+ 
+ // "11:00"
+ 
+const mongoose = require("mongoose");
+
+const AvailabilitySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  dayOfWeek: {
+    type: String,
+    enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+  },
+  startTime: String,
+  endTime: String,
+  timezone: String,
+}, { timestamps: true });
+
+module.exports = mongoose.model("Availability", AvailabilitySchema);
+ 
+📌 Register
+ 
+NODE_ENV= development
+ 
+// Load multer config from utils
+ 
+// utils/formatter.js
+ 
+
+const mongoose = require("mongoose");
+const app = require("./app");
+const connectDB = require("./config/db");
+require("dotenv").config();
+
+const PORT = process.env.PORT || 4000;
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(` Server running at http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error(" Failed to start server:", err.message);
+    process.exit(1);
+  }
+};
+
+startServer();
+ 
+// server.js
+
+ 
+// utils/formatter.js
+
+ 
+production
+ 
+// app.js
+
+ 
+─────
+ 
+ ─────
+ 
+─────
+ 
+─────
+ 
+})
+ 
+otificationSchema, {}
+ 
+})
+ 
+const InvoiceSchema = new mongoose.Schema({
+ 
+ {Job , "JobSchema"};
+ 
