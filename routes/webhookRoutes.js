@@ -22,17 +22,29 @@ const { stripeWebhookHandler } = require("../controllers/webhookController");
  *         application/json:
  *           schema:
  *             type: object
+ *             example:
+ *               id: evt_123
+ *               type: payment_intent.succeeded
+ *               data:
+ *                 object:
+ *                   id: pi_456
+ *                   amount: 5000
  *     responses:
  *       200:
  *         description: Webhook received successfully
- *      400:
+ *       400:
  *         description: Bad request
  *       500:
  *         description: Internal server error
- *  stripe cli
- *  command: stripe listen --forward-to http://localhost:4000/api/webhooks/stripe 
- *  This command will forward Stripe events to your local server for testing.
- * 
+ *     x-codeSamples:
+ *       - lang: bash
+ *         label: Stripe CLI
+ *         source: |
+ *           # Use Stripe CLI to forward events to your local webhook:
+ *           stripe listen --forward-to http://localhost:4000/webhooks/stripe
+ *           
+ *           # You can then trigger an event like:
+ *           stripe trigger payment_intent.succeeded
  */
 router.post("/stripe", stripeWebhookHandler);
 

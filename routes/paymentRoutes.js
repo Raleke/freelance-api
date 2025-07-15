@@ -89,25 +89,11 @@ router.post("/intent", authMiddleware, createPaymentIntent);
  *       - lang: bash
  *         label: Stripe CLI
  *         source: |
+ *           # Simulate a successful payment intent using Stripe CLI:
  *           stripe trigger payment_intent.succeeded \
  *             --add payment_intent:metadata.invoiceId=686d4b30cbd2915644129c5e \
  *             --add payment_intent:metadata.userId=686c02f14d4522baf52a4ed1 \
  *             --override payment_intent:amount=500000
- * you should use the Stripe CLI to test this endpoint
- * and the webhook integration.
- * The CLI command above simulates a successful payment intent with metadata.
- * Make sure to replace the metadata values with actual IDs from your database.
- * This will trigger the webhook event that your application listens to,
- * allowing you to test the transaction storage functionality.
- * Make sure your server is running and the webhook endpoint is correctly set up in Stripe.
- * You can also use the Stripe dashboard to manually create a payment intent
- * and then simulate the webhook event using the CLI.
- * This will help you verify that the transaction is stored correctly
- * and that the payment history can be retrieved.
- * output should be similar to: payment_intent.created [evt_3Rj5pWCTRrF4CybP0Dvegz6G]
-2025-07-09 22:47:07  <--  [200] POST http://localhost:4000/api/webhooks/stripe [evt_3Rj5pWCTRrF4CybP0Dvegz6G]
-2025-07-09 23:10:32   --> charge.succeeded [evt_3Rj6CBCTRrF4CybP0Vccu9Pc]
-2025-07-09 23:10:32   --> payment_intent.succeeded [evt_3Rj6CBCTRrF4CybP0Yo1MGHs]
  */
 
 router.post("/transaction", authMiddleware, storeTransaction);

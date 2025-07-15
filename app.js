@@ -4,7 +4,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const passport = require("passport");
 const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./swagger");
+const swaggerSpec = require("./config/swagger");
 const errorHandler = require("./middlewares/errorMiddleware");
 require("dotenv").config();
 require("./config/passport");
@@ -56,6 +56,11 @@ app.use("/api/debug", require("./routes/debugRoutes"));
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use(errorHandler);
 
+
+app.use(errorHandler);
+app.get("/swagger.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
 module.exports = app;
