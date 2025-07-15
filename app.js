@@ -3,6 +3,8 @@ const cors = require("cors");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const passport = require("passport");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
 const errorHandler = require("./middlewares/errorMiddleware");
 require("dotenv").config();
 require("./config/passport");
@@ -51,6 +53,8 @@ app.use("/api/disputes", require("./routes/disputeRoutes"));
 app.use("/api/orgs", require("./routes/organizationRoutes"));
 app.use("/api/availability", require("./routes/availabilityRoutes"));
 app.use("/api/debug", require("./routes/debugRoutes"));
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(errorHandler);
 
